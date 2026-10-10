@@ -6,15 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && touch dist/.gitkeep",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
     "@vitejs/plugin-vue": "^5.2.1",
+    "lefthook": "^2.2.1",
     "typescript": "^5.7.3",
     "vite": "^6.1.0",
+    "vitest": "^5.0.3",
     "vue-tsc": "^2.2.4"
   }
 }

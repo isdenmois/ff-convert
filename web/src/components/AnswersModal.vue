@@ -1,65 +1,77 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { submitAnswers } from '../api'
-import type { Answers, JobView } from '../types'
+import { computed, reactive, ref } from "vue";
+import { submitAnswers } from "../api";
+import type { Answers, JobView } from "../types";
 
-const props = defineProps<{ job: JobView }>()
-const emit = defineEmits<{ close: [] }>()
+const props = defineProps<{ job: JobView }>();
+const emit = defineEmits<{ close: [] }>();
 
-const q = props.job.questions!
-const groupIdx = ref(0)
-const group = computed(() => q.groups[groupIdx.value])
+// The modal is only rendered when the job has pending questions.
+// biome-ignore lint/style/noNonNullAssertion: guaranteed by the parent (App only opens this when questions exist)
+const q = props.job.questions!;
+const groupIdx = ref(0);
+const group = computed(() => q.groups[groupIdx.value]);
 
 // Per-group draft answers, initialized from defaults. The ?? [] guards
 // against older backends encoding an empty default list as JSON null
 // (spreading null throws). The video preset, normalization and attachments
 // are not part of the drafts — they are one set of choices for the whole
 // queue item.
-const drafts = reactive<Omit<Answers, 'preset' | 'normalize' | 'attachments'>[]>(
+const drafts = reactive<Omit<Answers, "preset" | "normalize" | "attachments">[]>(
   q.groups.map((g) => ({
     audio: [...(g.audio_defaults ?? [])],
     subs: [...(g.subs_defaults ?? [])],
   })),
-)
+);
 // Queue-item-wide choices, preselected with the defaults ("copy" preset,
 // normalization on, attachments copy — unless the config overrides);
 // replicated into every group draft on submit.
-const preset = ref(q.default_preset)
-const normalize = ref(q.defaults.normalize)
-const attachments = ref(q.defaults.attachments)
-const draft = computed(() => drafts[groupIdx.value])
+const preset = ref(q.default_preset);
+const normalize = ref(q.defaults.normalize);
+const attachments = ref(q.defaults.attachments);
+const draft = computed(() => drafts[groupIdx.value]);
 
-const error = ref('')
-const busy = ref(false)
+const error = ref("");
+const busy = ref(false);
 
-function toggle(list: 'audio' | 'subs', index: number) {
-  const arr = draft.value[list]
-  const i = arr.indexOf(index)
+function toggle(list: "audio" | "subs", index: number) {
+  const arr = draft.value[list];
+  const i = arr.indexOf(index);
   if (i >= 0) {
-    if (list === 'audio' && arr.length === 1) return // keep ≥1 audio track
-    arr.splice(i, 1)
+    if (list === "audio" && arr.length === 1) return; // keep ≥1 audio track
+    arr.splice(i, 1);
   } else {
-    arr.push(index)
+    arr.push(index);
   }
 }
 
 async function submit() {
   for (const [i, d] of drafts.entries()) {
     if (d.audio.length === 0) {
-      groupIdx.value = i
-      error.value = 'Select at least one audio track.'
-      return
+      groupIdx.value = i;
+      error.value = "Select at least one audio track.";
+      return;
     }
   }
-  busy.value = true
-  error.value = ''
+  busy.value = true;
+  error.value = "";
   try {
-    await submitAnswers(props.job.id, drafts.map((d) => ({ ...d, preset: preset.value, normalize: normalize.value, attachments: attachments.value, audio: [...d.audio], subs: [...d.subs] })))
-    emit('close')
+    await submitAnswers(
+      props.job.id,
+      drafts.map((d) => ({
+        ...d,
+        preset: preset.value,
+        normalize: normalize.value,
+        attachments: attachments.value,
+        audio: [...d.audio],
+        subs: [...d.subs],
+      })),
+    );
+    emit("close");
   } catch (e) {
-    error.value = String(e)
+    error.value = String(e);
   } finally {
-    busy.value = false
+    busy.value = false;
   }
 }
 </script>
@@ -75,8 +87,26 @@ async function submit() {
       <section v-if="q.ask_preset" class="inline">
         <h3>Video preset (all files)</h3>
         <select v-model="preset">
-          <option v-for="p in q.preset_choices" :key="p" :value="p">{{ p }}</option>
+          <option v-for="p in q.preset_choices" :key="p" :value="p">
+            {{ p }}
+          </option>
         </select>
+      </section>
+
+      <section v-if="q.ask_normalize" class="inline">
+        <h3>Normalize loudness — loudnorm i=-13 (all files)</h3>
+        <label class="track">
+          <input type="checkbox" v-model="normalize" />
+          {{ normalize ? "enabled" : "disabled" }}
+        </label>
+      </section>
+
+      <section v-if="q.ask_attachments" class="inline">
+        <h3>Attachments — fonts, posters (all files)</h3>
+        <label class="track">
+          <input type="checkbox" v-model="attachments" />
+          {{ attachments ? "copy" : "omit" }}
+        </label>
       </section>
 
       <nav v-if="q.groups.length > 1">
@@ -89,7 +119,9 @@ async function submit() {
           Group {{ i + 1 }} ({{ g.file_count }} files)
         </button>
       </nav>
-      <p v-else class="muted">{{ group.file_count }} file(s) share this track layout.</p>
+      <p v-else class="muted">
+        {{ group.file_count }} file(s) share this track layout.
+      </p>
 
       <section>
         <h3>Audio tracks → opus stereo</h3>
@@ -116,32 +148,12 @@ async function submit() {
         </label>
       </section>
 
-      <section v-if="q.ask_normalize" class="inline">
-        <h3>Normalize loudness — loudnorm i=-13 (all files)</h3>
-        <label class="track">
-          <input type="checkbox" v-model="normalize" />
-          {{ normalize ? 'enabled' : 'disabled' }}
-        </label>
-      </section>
-
-      <section v-if="q.ask_attachments" class="inline">
-        <h3>Attachments — fonts, posters (all files)</h3>
-        <label class="track">
-          <input type="checkbox" v-model="attachments" />
-          {{ attachments ? 'copy' : 'omit' }}
-        </label>
-      </section>
-
       <footer>
         <p v-if="error" class="error">{{ error }}</p>
         <span class="spacer" />
         <button @click="emit('close')">Cancel</button>
-        <button
-          class="primary"
-          :disabled="busy"
-          @click="submit"
-        >
-          {{ busy ? 'Starting…' : 'Start conversion' }}
+        <button class="primary" :disabled="busy" @click="submit">
+          {{ busy ? "Starting…" : "Start conversion" }}
         </button>
       </footer>
     </div>

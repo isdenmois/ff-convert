@@ -18,7 +18,7 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -72,7 +72,7 @@ button.primary {
   color: #fff;
 }
 
-input[type='checkbox'],
+input[type="checkbox"],
 select {
   accent-color: var(--accent);
 }
@@ -116,12 +116,30 @@ select {
   color: var(--muted);
 }
 
-.badge.probing, .badge.queued { color: var(--warn); border-color: var(--warn); }
-.badge.questions { color: var(--accent); border-color: var(--accent); }
-.badge.running { color: #3498db; border-color: #3498db; }
-.badge.done { color: var(--ok); border-color: var(--ok); }
-.badge.failed { color: var(--err); border-color: var(--err); }
-.badge.canceled { color: var(--muted); }
+.badge.probing,
+.badge.queued {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+.badge.questions {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.badge.running {
+  color: #3498db;
+  border-color: #3498db;
+}
+.badge.done {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+.badge.failed {
+  color: var(--err);
+  border-color: var(--err);
+}
+.badge.canceled {
+  color: var(--muted);
+}
 
 .card {
   background: var(--panel);

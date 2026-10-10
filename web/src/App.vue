@@ -1,19 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { store, createJob } from './api'
-import LibraryBrowser from './components/LibraryBrowser.vue'
-import JobCard from './components/JobCard.vue'
-import AnswersModal from './components/AnswersModal.vue'
+import { computed, ref, watch } from "vue";
+import { createJob, store } from "./api";
+import AnswersModal from "./components/AnswersModal.vue";
+import JobCard from "./components/JobCard.vue";
+import LibraryBrowser from "./components/LibraryBrowser.vue";
 
-const error = ref('')
-const answeringJobId = ref<string | null>(null)
+const error = ref("");
+const answeringJobId = ref<string | null>(null);
 // Jobs whose questions dialog the user explicitly closed; they are not
 // auto-reopened until the job leaves the questions state.
-const dismissed = new Set<string>()
+const dismissed = new Set<string>();
 
-const answeringJob = computed(() =>
-  store.jobs.find((j) => j.id === answeringJobId.value) ?? null,
-)
+const answeringJob = computed(() => store.jobs.find((j) => j.id === answeringJobId.value) ?? null);
 
 // Auto-open the questions dialog for a job waiting on answers (initial load,
 // page reload, or a dialog closed earlier). One dialog at a time: further
@@ -23,33 +21,33 @@ watch(
   () => store.jobs,
   (jobs) => {
     for (const j of jobs) {
-      if (j.state !== 'questions') dismissed.delete(j.id)
+      if (j.state !== "questions") dismissed.delete(j.id);
     }
-    if (answeringJob.value?.state !== 'questions') {
-      const next = jobs.find((j) => j.state === 'questions' && !dismissed.has(j.id))
-      if (next) answeringJobId.value = next.id
+    if (answeringJob.value?.state !== "questions") {
+      const next = jobs.find((j) => j.state === "questions" && !dismissed.has(j.id));
+      if (next) answeringJobId.value = next.id;
     }
   },
   { immediate: true },
-)
+);
 
 async function onConvert(path: string) {
-  error.value = ''
+  error.value = "";
   try {
-    await createJob(path)
+    await createJob(path);
   } catch (e) {
-    error.value = String(e)
+    error.value = String(e);
   }
 }
 
 function openAnswers(id: string) {
-  dismissed.delete(id)
-  answeringJobId.value = id
+  dismissed.delete(id);
+  answeringJobId.value = id;
 }
 
 function closeAnswers() {
-  if (answeringJobId.value) dismissed.add(answeringJobId.value)
-  answeringJobId.value = null
+  if (answeringJobId.value) dismissed.add(answeringJobId.value);
+  answeringJobId.value = null;
 }
 </script>
 

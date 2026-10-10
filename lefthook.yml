@@ -1,0 +1,26 @@
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      root: "web"
+      glob: "*.{js,mjs,cjs,ts,mts,cts,tsx,jsx,vue,css,html,json,jsonc}"
+      run: bunx biome check --no-errors-on-unmatched --write {staged_files}
+      stage_fixed: true
+
+    frontend-typecheck:
+      root: "web"
+      glob: "*.{ts,vue}"
+      run: bun run typecheck
+
+    frontend-tests:
+      root: "web"
+      glob: "*.{ts,vue}"
+      run: bun run test
+
+    go-format:
+      glob: "*.go"
+      run: test -z "$(gofmt -l {staged_files})" || { echo "Run 'just format' to fix:"; gofmt -l {staged_files}; exit 1; }
+
+    go-test:
+      glob: "*.go"
+      run: go test ./...

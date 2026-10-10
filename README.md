@@ -56,7 +56,12 @@ cd cmd/ffconvert-desktop && wails build -tags webkit2_41
 ./build/bin/ffconvert-desktop
 ```
 
-`just test` runs the test suite, `just format` gofmts the code.
+Run `just setup` once after cloning to install frontend dependencies and the
+git hooks ([lefthook](https://lefthook.dev) pre-commit: biome lint/format,
+typecheck, tests for the frontend; gofmt check and `go test` for Go).
+
+`just test` runs the test suite (Go + frontend), `just lint` lints the frontend
+(biome), `just format` formats all code (gofmt + biome).
 
 Web development with hot reload: run `./ffconvert-web` (port 8080) and
 `cd web && bun run dev` (Vite on 5173, proxying `/api`).

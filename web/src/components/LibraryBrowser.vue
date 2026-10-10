@@ -1,40 +1,40 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { listLibrary } from '../api'
-import type { LibraryEntry } from '../types'
+import { onMounted, ref } from "vue";
+import { listLibrary } from "../api";
+import type { LibraryEntry } from "../types";
 
-const emit = defineEmits<{ convert: [path: string] }>()
+const emit = defineEmits<{ convert: [path: string] }>();
 
-const entries = ref<LibraryEntry[]>([])
-const path = ref('')
-const error = ref('')
-const loading = ref(false)
+const entries = ref<LibraryEntry[]>([]);
+const path = ref("");
+const error = ref("");
+const loading = ref(false);
 
 async function load() {
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
   try {
-    entries.value = await listLibrary(path.value)
+    entries.value = await listLibrary(path.value);
   } catch (e) {
-    error.value = String(e)
+    error.value = String(e);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function open(dir: LibraryEntry) {
-  path.value = dir.path
-  load()
+  path.value = dir.path;
+  load();
 }
 
 function up() {
-  const parts = path.value.split('/').filter(Boolean)
-  parts.pop()
-  path.value = parts.join('/')
-  load()
+  const parts = path.value.split("/").filter(Boolean);
+  parts.pop();
+  path.value = parts.join("/");
+  load();
 }
 
-onMounted(load)
+onMounted(load);
 </script>
 
 <template>

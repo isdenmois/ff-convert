@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { cancelJob, removeJob } from '../api'
-import type { JobView } from '../types'
+import { computed } from "vue";
+import { cancelJob, removeJob } from "../api";
+import type { JobView } from "../types";
 
-const props = defineProps<{ job: JobView }>()
-const emit = defineEmits<{ answer: [id: string] }>()
+const props = defineProps<{ job: JobView }>();
+const emit = defineEmits<{ answer: [id: string] }>();
 
-const overallPct = computed(() => Math.round(props.job.overall * 100))
+const overallPct = computed(() => Math.round(props.job.overall * 100));
 
 const stateLabel: Record<string, string> = {
-  probing: 'probing',
-  questions: 'needs answers',
-  queued: 'queued',
-  running: 'running',
-  done: 'done',
-  failed: 'failed',
-  canceled: 'canceled',
-}
+  probing: "probing",
+  questions: "needs answers",
+  queued: "queued",
+  running: "running",
+  done: "done",
+  failed: "failed",
+  canceled: "canceled",
+};
 
 async function onCancel() {
   try {
-    await cancelJob(props.job.id)
+    await cancelJob(props.job.id);
   } catch {
     /* state may have changed; WS will refresh */
   }
@@ -28,7 +28,7 @@ async function onCancel() {
 
 async function onRemove() {
   try {
-    await removeJob(props.job.id)
+    await removeJob(props.job.id);
   } catch {
     /* state may have changed; WS will refresh */
   }
