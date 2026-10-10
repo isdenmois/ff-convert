@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/isden/ff-convert/internal/plan"
 	"github.com/isden/ff-convert/internal/pool"
 	"github.com/isden/ff-convert/internal/probe"
+	"github.com/isden/ff-convert/internal/scan"
 )
 
 // App is the Wails binding target; its exported methods are called from the
@@ -20,6 +22,10 @@ import (
 type App struct {
 	ctx context.Context
 	mgr *jobs.Manager
+	// defaultOutDir is the output folder resolved at startup
+	// (FF_CONVERT_OUTPUT_DIR > config output_dir > ~/Videos/converted);
+	// resetting the selection returns to it.
+	defaultOutDir string
 }
 
 // NewApp builds the app with the shared conversion core.
@@ -31,7 +37,8 @@ func NewApp() *App {
 	if err != nil {
 		log.Fatal("config: ", err)
 	}
-	return &App{mgr: jobs.NewManager(cfg, pool.NewDefault())}
+	outDir := scan.ResolveOutputDir(cfg.OutputDir, defaultOutputDir())
+	return &App{mgr: jobs.NewManager(cfg, pool.NewDefault(), outDir), defaultOutDir: outDir}
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -73,6 +80,41 @@ func (a *App) PickFolder() (string, error) {
 	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Choose a folder with movie files",
 	})
+}
+
+// OutputDirInfo pairs the current output folder with the startup default.
+type OutputDirInfo struct {
+	Current string `json:"current"`
+	Default string `json:"default"`
+}
+
+// PickOutputFolder opens the native folder dialog for the output folder and
+// returns the chosen path ("" when canceled).
+func (a *App) PickOutputFolder() (string, error) {
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Choose the output folder",
+	})
+}
+
+// GetOutputDirInfo returns the current output folder (applied to newly added
+// jobs) and the startup default.
+func (a *App) GetOutputDirInfo() OutputDirInfo {
+	return OutputDirInfo{Current: a.mgr.OutputDir(), Default: a.defaultOutDir}
+}
+
+// SetOutputDir changes the output folder for jobs added from now on; each
+// job keeps the folder it was added with.
+func (a *App) SetOutputDir(dir string) error {
+	if dir == "" {
+		return errors.New("empty output folder")
+	}
+	a.mgr.SetOutputDir(dir)
+	return nil
+}
+
+// ResetOutputDir returns the output folder to the startup default.
+func (a *App) ResetOutputDir() {
+	a.mgr.SetOutputDir(a.defaultOutDir)
 }
 
 // AddJob registers a new conversion job for the picked path.

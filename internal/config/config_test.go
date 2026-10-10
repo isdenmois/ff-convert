@@ -56,6 +56,7 @@ audio:
   bitrate: 160k
   normalize: false
 attachments: omit
+output_dir: /mnt/media/converted
 `
 	if err := os.WriteFile(path, []byte(yml), 0o644); err != nil {
 		t.Fatal(err)
@@ -82,6 +83,9 @@ attachments: omit
 	}
 	if cfg.Attachments == nil || *cfg.Attachments != "omit" {
 		t.Fatal("attachments should be omit")
+	}
+	if cfg.OutputDir != "/mnt/media/converted" {
+		t.Fatalf("OutputDir = %q", cfg.OutputDir)
 	}
 	if got := cfg.DefaultPresetName(); got != "av1-fast" {
 		t.Fatalf("DefaultPresetName() = %q, want av1-fast", got)

@@ -62,6 +62,8 @@ export interface JobView {
   id: string
   path: string
   name: string
+  /** Output folder pinned when the job was created. */
+  output_dir?: string
   state: string
   created_at: string
   questions?: QuestionsView

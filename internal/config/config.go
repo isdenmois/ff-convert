@@ -63,6 +63,10 @@ type Config struct {
 	Audio         *Audio            `yaml:"audio,omitempty"`
 	// Attachments, when set ("copy" or "omit"), skips the attachment question.
 	Attachments *string `yaml:"attachments,omitempty"`
+	// OutputDir, when set, is the default folder converted files are written
+	// to (an absolute path is recommended). FF_CONVERT_OUTPUT_DIR overrides
+	// it; frontends apply their own fallback when both are unset.
+	OutputDir string `yaml:"output_dir,omitempty"`
 
 	builtins map[string]Preset
 }

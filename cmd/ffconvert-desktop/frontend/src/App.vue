@@ -3,9 +3,13 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   AddJob,
   CancelJob,
+  GetOutputDirInfo,
   PickFile,
   PickFolder,
+  PickOutputFolder,
   RemoveJob,
+  ResetOutputDir,
+  SetOutputDir,
   Snapshot,
 } from '../wailsjs/go/main/App'
 import { EventsOn } from '../wailsjs/runtime/runtime'
@@ -16,6 +20,8 @@ import AnswersModal from './AnswersModal.vue'
 const store = reactive({ jobs: [] as JobView[] })
 const error = ref('')
 const answeringJobId = ref<string | null>(null)
+// Output folder applied to newly added jobs (each job pins it at creation).
+const output = reactive({ current: '', default: '' })
 // Jobs whose questions dialog the user explicitly closed; they are not
 // auto-reopened until the job leaves the questions state.
 const dismissed = new Set<string>()
@@ -30,6 +36,7 @@ onMounted(async () => {
   } catch (e) {
     error.value = String(e)
   }
+  await refreshOutput()
   EventsOn('jobs', (jobs: JobView[]) => {
     store.jobs = jobs ?? []
   })
@@ -59,6 +66,38 @@ async function add(kind: 'file' | 'folder') {
     const path = kind === 'file' ? await PickFile() : await PickFolder()
     if (!path) return
     await AddJob(path)
+  } catch (e) {
+    error.value = String(e)
+  }
+}
+
+async function refreshOutput() {
+  try {
+    const info = await GetOutputDirInfo()
+    output.current = info?.current ?? ''
+    output.default = info?.default ?? ''
+  } catch (e) {
+    error.value = String(e)
+  }
+}
+
+async function changeOutput() {
+  error.value = ''
+  try {
+    const path = await PickOutputFolder()
+    if (!path) return
+    await SetOutputDir(path)
+    await refreshOutput()
+  } catch (e) {
+    error.value = String(e)
+  }
+}
+
+async function resetOutput() {
+  error.value = ''
+  try {
+    await ResetOutputDir()
+    await refreshOutput()
   } catch (e) {
     error.value = String(e)
   }
@@ -100,6 +139,16 @@ async function remove(id: string) {
   <div class="toolbar">
     <button class="primary" @click="add('file')">Add file…</button>
     <button class="primary" @click="add('folder')">Add folder…</button>
+    <span class="spacer" />
+    <span class="muted outdir" :title="output.current">Output: {{ output.current }}</span>
+    <button @click="changeOutput">Change…</button>
+    <button
+      v-if="output.current && output.current !== output.default"
+      title="Back to the configured default output folder"
+      @click="resetOutput"
+    >
+      Reset
+    </button>
   </div>
 
   <p v-if="error" class="error">{{ error }}</p>
@@ -130,8 +179,18 @@ header {
 }
 .toolbar {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin: 12px 0;
+}
+.toolbar .spacer {
+  flex: 1;
+}
+.outdir {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
 }
 .error {
   color: var(--err);

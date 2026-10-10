@@ -43,6 +43,10 @@ const stateLabel: Record<string, string> = {
 
     <p v-if="job.error" class="error">{{ job.error }}</p>
 
+    <p v-if="job.output_dir" class="muted small outdir" :title="job.output_dir">
+      → {{ job.output_dir }}
+    </p>
+
     <div v-if="job.total > 0" class="overall">
       <div class="bar"><div :style="{ width: overallPct + '%' }" /></div>
       <span class="muted pct">{{ overallPct }}%</span>
@@ -63,6 +67,9 @@ const stateLabel: Record<string, string> = {
           <span class="muted small pct">{{ Math.round(f.percent * 100) }}% {{ f.speed }}</span>
         </template>
         <span v-else-if="f.state === 'failed'" class="error small" :title="f.error">failed</span>
+        <span v-if="f.state !== 'running' && f.output" class="muted small fpath" :title="f.output">
+          {{ f.output }}
+        </span>
       </div>
     </div>
   </div>
@@ -77,6 +84,12 @@ const stateLabel: Record<string, string> = {
 }
 .spacer {
   flex: 1;
+}
+.outdir {
+  margin: 0 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .overall {
   display: flex;
@@ -106,6 +119,13 @@ const stateLabel: Record<string, string> = {
 .fstate {
   width: 14px;
   text-align: center;
+}
+.fpath {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pct {
   min-width: 90px;

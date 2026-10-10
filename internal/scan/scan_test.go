@@ -19,27 +19,25 @@ func TestOutputPathIn(t *testing.T) {
 	}
 }
 
-func TestOutputPath(t *testing.T) {
-	// Default: "converted" relative to the working directory.
-	want := filepath.Join(ConvertedDir, "Movie.mkv")
-	if got := OutputPath("/movies/Movie.mkv"); got != want {
-		t.Errorf("OutputPath = %q, want %q", got, want)
+func TestResolveOutputDir(t *testing.T) {
+	// Fallback when neither env nor config set anything.
+	if got := ResolveOutputDir("", ConvertedDir); got != ConvertedDir {
+		t.Errorf("ResolveOutputDir(fallback) = %q, want %q", got, ConvertedDir)
 	}
-
-	// Overridden via FF_CONVERT_OUTPUT_DIR.
-	t.Setenv(EnvOutputDir, "/mnt/out")
-	if got := OutputPath("/movies/Movie.mkv"); got != filepath.Join("/mnt/out", "Movie.mkv") {
-		t.Errorf("OutputPath with env = %q", got)
+	// Configured value beats the fallback.
+	if got := ResolveOutputDir("/from/config", ConvertedDir); got != "/from/config" {
+		t.Errorf("ResolveOutputDir(configured) = %q", got)
 	}
-	if got := OutputDir(); got != "/mnt/out" {
-		t.Errorf("OutputDir = %q", got)
+	// FF_CONVERT_OUTPUT_DIR beats both.
+	t.Setenv(EnvOutputDir, "/from/env")
+	if got := ResolveOutputDir("/from/config", ConvertedDir); got != "/from/env" {
+		t.Errorf("ResolveOutputDir(env) = %q, want /from/env", got)
 	}
 }
 
 func TestScanFolder(t *testing.T) {
 	dir := t.TempDir()
 	outDir := t.TempDir()
-	t.Setenv(EnvOutputDir, outDir)
 	files := []string{
 		"b ep10.mkv", "B ep2.mkv", "a movie.mp4", "notes.txt", ".hidden.mkv",
 	}
@@ -53,7 +51,7 @@ func TestScanFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res, err := Scan(dir)
+	res, err := Scan(dir, outDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,24 +72,50 @@ func TestScanFolder(t *testing.T) {
 	}
 }
 
+func TestScanSkipsSourceInOutputDir(t *testing.T) {
+	// A source file whose output path is the file itself (the source folder
+	// doubles as the output folder) must be skipped, not converted in place.
+	dir := t.TempDir()
+	p := filepath.Join(dir, "movie.mkv")
+	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := Scan(p, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Files) != 0 || len(res.Skipped) != 1 || res.Skipped[0].Path != p {
+		t.Fatalf("Scan(source in outDir) = %+v, want one skipped", res)
+	}
+
+	res, err = Scan(dir, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Files) != 0 || len(res.Skipped) != 1 {
+		t.Fatalf("Scan(folder in outDir) = %+v, want one skipped", res)
+	}
+}
+
 func TestScanSingleFile(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "single.mkv")
 	os.WriteFile(p, []byte("x"), 0o644)
 
-	res, err := Scan(p)
+	res, err := Scan(p, t.TempDir())
 	if err != nil || len(res.Files) != 1 || res.Files[0] != p {
 		t.Fatalf("Scan(file) = %+v, %v", res, err)
 	}
 
-	if _, err := Scan(filepath.Join(dir, "missing.mkv")); err == nil {
+	if _, err := Scan(filepath.Join(dir, "missing.mkv"), t.TempDir()); err == nil {
 		t.Fatal("missing file must error")
 	}
-	if _, err := Scan(filepath.Join(dir, "no.txt")); err == nil {
+	if _, err := Scan(filepath.Join(dir, "no.txt"), t.TempDir()); err == nil {
 		if err := os.WriteFile(filepath.Join(dir, "no.txt"), []byte("x"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := Scan(filepath.Join(dir, "no.txt")); err == nil {
+		if _, err := Scan(filepath.Join(dir, "no.txt"), t.TempDir()); err == nil {
 			t.Fatal("non-video file must error")
 		}
 	}

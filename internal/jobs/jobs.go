@@ -116,9 +116,12 @@ type SkippedView struct {
 
 // JobView is the complete UI snapshot of a job.
 type JobView struct {
-	ID        string         `json:"id"`
-	Path      string         `json:"path"`
-	Name      string         `json:"name"`
+	ID   string `json:"id"`
+	Path string `json:"path"`
+	Name string `json:"name"`
+	// OutputDir is the output folder pinned when the job was created; later
+	// changes to the Manager's output dir do not affect it.
+	OutputDir string         `json:"output_dir,omitempty"`
 	State     State          `json:"state"`
 	CreatedAt time.Time      `json:"created_at"`
 	Questions *QuestionsView `json:"questions,omitempty"`
@@ -132,8 +135,10 @@ type JobView struct {
 }
 
 type job struct {
-	id        string
-	path      string
+	id   string
+	path string
+	// outDir is the output folder pinned at creation time (see JobView).
+	outDir    string
 	created   time.Time
 	state     State
 	err       string
@@ -150,6 +155,8 @@ type job struct {
 type Manager struct {
 	cfg  *config.Config
 	pool *pool.Pool
+	// outDir is the current output folder; jobs pin it at creation.
+	outDir string
 
 	mu        sync.Mutex
 	jobs      []*job
@@ -159,15 +166,32 @@ type Manager struct {
 }
 
 // NewManager creates a manager. The pool is shared: all jobs' tasks compete
-// for its worker slots.
-func NewManager(cfg *config.Config, p *pool.Pool) *Manager {
+// for its worker slots. outDir is the initial output folder (FF_CONVERT_
+// OUTPUT_DIR / config output_dir / frontend fallback, already resolved by
+// the caller).
+func NewManager(cfg *config.Config, p *pool.Pool, outDir string) *Manager {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
 	if p == nil {
 		p = pool.NewDefault()
 	}
-	return &Manager{cfg: cfg, pool: p, listeners: map[int]func(){}}
+	return &Manager{cfg: cfg, pool: p, outDir: outDir, listeners: map[int]func(){}}
+}
+
+// OutputDir returns the current output folder applied to newly created jobs.
+func (m *Manager) OutputDir() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.outDir
+}
+
+// SetOutputDir changes the output folder for jobs created from now on;
+// existing jobs keep the folder pinned at their creation.
+func (m *Manager) SetOutputDir(dir string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.outDir = dir
 }
 
 // Subscribe registers a change notification callback. The returned function
@@ -198,7 +222,7 @@ func (m *Manager) notify() {
 }
 
 // Create registers a new job for the given file/folder path and starts
-// probing asynchronously.
+// probing asynchronously. The job pins the manager's current output folder.
 func (m *Manager) Create(path string) (JobView, error) {
 	if _, err := os.Stat(path); err != nil {
 		return JobView{}, err
@@ -213,6 +237,7 @@ func (m *Manager) Create(path string) (JobView, error) {
 	j := &job{
 		id:      strconv.Itoa(m.nextID),
 		path:    abs,
+		outDir:  m.outDir,
 		created: time.Now(),
 		state:   StateProbing,
 	}
@@ -226,7 +251,7 @@ func (m *Manager) Create(path string) (JobView, error) {
 }
 
 func (m *Manager) probeJob(j *job) {
-	p, err := convert.Probe(j.ctx, j.path)
+	p, err := convert.Probe(j.ctx, j.path, j.outDir)
 	m.mu.Lock()
 	if j.state != StateProbing { // canceled meanwhile
 		m.mu.Unlock()
@@ -294,7 +319,7 @@ func (m *Manager) SubmitAnswers(id string, answers []plan.Answers) error {
 		m.mu.Unlock()
 		return fmt.Errorf("%d answer groups for %d question groups", len(answers), len(j.questions.Groups))
 	}
-	sess, err := j.plan.BuildSession(m.cfg, answers)
+	sess, err := j.plan.BuildSession(m.cfg, answers, j.outDir)
 	if err != nil {
 		m.mu.Unlock()
 		return err
@@ -440,6 +465,7 @@ func (m *Manager) view(j *job) JobView {
 		ID:        j.id,
 		Path:      j.path,
 		Name:      filepath.Base(j.path),
+		OutputDir: j.outDir,
 		State:     j.state,
 		CreatedAt: j.created,
 		Error:     j.err,

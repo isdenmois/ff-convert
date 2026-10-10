@@ -71,6 +71,9 @@ async function submit() {
         <strong>{{ job.name }}</strong>
         <button class="close" @click="emit('close')">×</button>
       </header>
+      <p v-if="job.output_dir" class="muted small" :title="job.output_dir">
+        Output: {{ job.output_dir }}
+      </p>
 
       <section v-if="q.ask_preset" class="inline">
         <h3>Video preset (all files)</h3>
@@ -175,6 +178,13 @@ header {
 }
 header strong {
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+p.small {
+  margin: 0 0 8px;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -22,14 +22,19 @@ const EnvOutputDir = "FF_CONVERT_OUTPUT_DIR"
 // directory) where converted files are written.
 const ConvertedDir = "converted"
 
-// OutputDir returns the folder converted files are written to: the value of
-// FF_CONVERT_OUTPUT_DIR when set, otherwise "converted" in the working
-// directory.
-func OutputDir() string {
+// ResolveOutputDir resolves the folder converted files are written to: the
+// value of FF_CONVERT_OUTPUT_DIR when set, then the configured output_dir,
+// then the caller-provided fallback (frontends pick their own: "converted"
+// in the working directory for the TUI and web server, a Videos folder for
+// the desktop app).
+func ResolveOutputDir(configured, fallback string) string {
 	if dir := os.Getenv(EnvOutputDir); dir != "" {
 		return dir
 	}
-	return ConvertedDir
+	if configured != "" {
+		return configured
+	}
+	return fallback
 }
 
 // Skipped describes a file that was skipped because its output already exists.
@@ -47,12 +52,6 @@ type Result struct {
 // IsVideoFile reports whether the path has a movie extension.
 func IsVideoFile(path string) bool { return VideoExts[strings.ToLower(filepath.Ext(path))] }
 
-// OutputPath returns the converted output path for a source file in the
-// configured output folder (see OutputDir): <outputDir>/<base-without-ext>.mkv
-func OutputPath(file string) string {
-	return OutputPathIn(OutputDir(), file)
-}
-
 // OutputPathIn returns the converted output path for a source file in the
 // given folder: <dir>/<base-without-ext>.mkv
 func OutputPathIn(dir, file string) string {
@@ -64,8 +63,8 @@ func OutputPathIn(dir, file string) string {
 // Scan resolves a source path (single file or folder) to the list of movie
 // files to convert. Folder scans are top-level only, sorted naturally
 // (case-insensitive, number-aware), and skip files whose output already
-// exists.
-func Scan(source string) (Result, error) {
+// exists in outDir.
+func Scan(source, outDir string) (Result, error) {
 	info, err := os.Stat(source)
 	if err != nil {
 		return Result{}, err
@@ -75,7 +74,7 @@ func Scan(source string) (Result, error) {
 		if !IsVideoFile(source) {
 			return Result{}, fmt.Errorf("%s: not a video file", source)
 		}
-		if out := OutputPath(source); fileExists(out) {
+		if out := OutputPathIn(outDir, source); fileExists(out) {
 			return Result{Skipped: []Skipped{{Path: source, Output: out}}}, nil
 		}
 		return Result{Files: []string{source}}, nil
@@ -93,7 +92,14 @@ func Scan(source string) (Result, error) {
 		if !IsVideoFile(p) {
 			continue
 		}
-		if out := OutputPath(p); fileExists(out) {
+		out := OutputPathIn(outDir, p)
+		// A source file already sitting in the output folder would map onto
+		// itself; skip it rather than "convert" it in place.
+		if out == p {
+			res.Skipped = append(res.Skipped, Skipped{Path: p, Output: out})
+			continue
+		}
+		if fileExists(out) {
 			res.Skipped = append(res.Skipped, Skipped{Path: p, Output: out})
 			continue
 		}

@@ -4,6 +4,7 @@
 // Environment:
 //
 //	FF_CONVERT_LIBRARY_DIR   root folder browsable/convertible via the UI (required)
+//	FF_CONVERT_OUTPUT_DIR    output folder override (default: config output_dir, else ./converted)
 //	FF_CONVERT_PORT          listen port (default 8080)
 //	FF_CONVERT_CONFIG        config file override
 //	FF_CONVERT_CONCURRENCY   worker pool size (default: CPU count / 2)
@@ -59,12 +60,13 @@ func main() {
 		logger.Fatal("config", err)
 	}
 	p := pool.NewDefault()
+	outDir := scan.ResolveOutputDir(cfg.OutputDir, scan.ConvertedDir)
 	logger.Info("starting ff-convert web",
-		"library", abs, "port", port, "pool", p.Limit(),
+		"library", abs, "port", port, "pool", p.Limit(), "output", outDir,
 		"config", map[string]any{"exists": cfg.Exists, "path": cfg.Path})
 
-	mgr := jobs.NewManager(cfg, p)
-	srv := &server{mgr: mgr, lib: abs, log: logger}
+	mgr := jobs.NewManager(cfg, p, outDir)
+	srv := &server{mgr: mgr, lib: abs, outDir: outDir, log: logger}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
@@ -104,9 +106,10 @@ func envOr(key, def string) string {
 }
 
 type server struct {
-	mgr *jobs.Manager
-	lib string
-	log *log.Logger
+	mgr    *jobs.Manager
+	lib    string
+	outDir string
+	log    *log.Logger
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -150,7 +153,7 @@ func (s *server) handleLibrary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// The converted output folder is an implementation detail, hide it.
-	outDir := filepath.Base(scan.OutputDir())
+	outDir := filepath.Base(s.outDir)
 	var out []libraryEntry
 	for _, e := range entries {
 		name := e.Name()

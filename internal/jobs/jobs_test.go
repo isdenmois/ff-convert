@@ -9,7 +9,6 @@ import (
 
 	"github.com/isden/ff-convert/internal/plan"
 	"github.com/isden/ff-convert/internal/pool"
-	"github.com/isden/ff-convert/internal/scan"
 )
 
 func makeFixture(t *testing.T, dir, name string) string {
@@ -54,11 +53,10 @@ func TestJobLifecycle(t *testing.T) {
 	}
 	dir := t.TempDir()
 	outDir := t.TempDir()
-	t.Setenv(scan.EnvOutputDir, outDir)
 	makeFixture(t, dir, "a.mkv")
 	makeFixture(t, dir, "b.mkv")
 
-	m := NewManager(nil, pool.New(2))
+	m := NewManager(nil, pool.New(2), outDir)
 	notifications := 0
 	unsub := m.Subscribe(func() { notifications++ })
 	defer unsub()
@@ -69,6 +67,9 @@ func TestJobLifecycle(t *testing.T) {
 	}
 	if v.State != StateProbing {
 		t.Fatalf("state = %s", v.State)
+	}
+	if v.OutputDir != outDir {
+		t.Fatalf("output dir = %q, want %q", v.OutputDir, outDir)
 	}
 	q := waitState(t, m, v.ID, StateQuestions)
 	if q.Questions == nil || len(q.Questions.Groups) != 1 {
@@ -132,5 +133,41 @@ func TestJobLifecycle(t *testing.T) {
 	}
 	if _, err := m.View(v2.ID); err == nil {
 		t.Fatal("removed job must be gone")
+	}
+}
+
+// Jobs pin the output folder at creation: changing the manager's output dir
+// must not affect jobs added earlier.
+func TestOutputDirPinnedAtCreate(t *testing.T) {
+	dir := t.TempDir()
+	m := NewManager(nil, pool.New(1), "/out/first")
+
+	a, err := m.Create(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.OutputDir != "/out/first" {
+		t.Fatalf("job a output dir = %q", a.OutputDir)
+	}
+
+	m.SetOutputDir("/out/second")
+	if got := m.OutputDir(); got != "/out/second" {
+		t.Fatalf("manager output dir = %q, want /out/second", got)
+	}
+
+	va, err := m.View(a.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if va.OutputDir != "/out/first" {
+		t.Fatalf("existing job must keep its pinned dir, got %q", va.OutputDir)
+	}
+
+	b, err := m.Create(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.OutputDir != "/out/second" {
+		t.Fatalf("new job must use the current dir, got %q", b.OutputDir)
 	}
 }

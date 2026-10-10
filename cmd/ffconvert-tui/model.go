@@ -12,6 +12,7 @@ import (
 	"github.com/isden/ff-convert/internal/plan"
 	"github.com/isden/ff-convert/internal/pool"
 	"github.com/isden/ff-convert/internal/probe"
+	"github.com/isden/ff-convert/internal/scan"
 )
 
 type phase int
@@ -55,6 +56,8 @@ type model struct {
 	source string
 	cfg    *config.Config
 	pool   *pool.Pool
+	// outDir is the resolved output folder (env > config > "converted").
+	outDir string
 
 	phase   phase
 	err     error
@@ -81,6 +84,7 @@ func newModel(source string, cfg *config.Config, p *pool.Pool) model {
 		source:  source,
 		cfg:     cfg,
 		pool:    p,
+		outDir:  scan.ResolveOutputDir(cfg.OutputDir, scan.ConvertedDir),
 		phase:   phaseProbing,
 		spinner: sp,
 	}
@@ -91,11 +95,11 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) probeCmd() tea.Cmd {
-	source, cfg := m.source, m.cfg
+	source, cfg, outDir := m.source, m.cfg, m.outDir
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
-		p, err := convert.Probe(ctx, source)
+		p, err := convert.Probe(ctx, source, outDir)
 		if err != nil {
 			return errMsg{err}
 		}
@@ -266,7 +270,7 @@ func (m *model) options() []string {
 }
 
 func (m *model) confirm() tea.Cmd {
-	sess, err := m.plan.BuildSession(m.cfg, m.reply)
+	sess, err := m.plan.BuildSession(m.cfg, m.reply, m.outDir)
 	if err != nil {
 		m.phase = phaseError
 		m.err = err

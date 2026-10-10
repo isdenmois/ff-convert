@@ -197,9 +197,10 @@ type Plan struct {
 	Groups  []*group.Group
 }
 
-// Probe scans and probes the source and groups the files.
-func Probe(ctx context.Context, source string) (*Plan, error) {
-	scanRes, err := scan.Scan(source)
+// Probe scans and probes the source (writing outputs to outDir) and groups
+// the files.
+func Probe(ctx context.Context, source, outDir string) (*Plan, error) {
+	scanRes, err := scan.Scan(source, outDir)
 	if err != nil {
 		return nil, err
 	}
@@ -265,11 +266,12 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 	return inputs
 }
 
-// BuildSession assembles the runnable session from per-group answers. The
-// answers slice is index-aligned with the AskInputs result. Preset, Normalize
-// and Attachments are queue-item-wide choices expected to be identical across
-// groups; an empty Preset falls back to the configured default preset.
-func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers) (*Session, error) {
+// BuildSession assembles the runnable session from per-group answers,
+// writing outputs to outDir. The answers slice is index-aligned with the
+// AskInputs result. Preset, Normalize and Attachments are queue-item-wide
+// choices expected to be identical across groups; an empty Preset falls back
+// to the configured default preset.
+func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers, outDir string) (*Session, error) {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
@@ -286,7 +288,7 @@ func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers) (*Sessio
 			name = ans.Preset
 		}
 		for _, m := range g.Files {
-			out := scan.OutputPath(m.Path)
+			out := scan.OutputPathIn(outDir, m.Path)
 			task, err := plan.Build(m, name, ans, presets, cfg.Bitrate(), out)
 			if err != nil {
 				return nil, err
@@ -304,9 +306,15 @@ func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers) (*Sessio
 }
 
 // Prepare is the one-shot convenience for frontends that can ask
-// synchronously: probe, ask about every group, build the session.
+// synchronously: probe, ask about every group, build the session. The
+// output folder is resolved from the config (FF_CONVERT_OUTPUT_DIR
+// overriding, "converted" in the working directory as the fallback).
 func Prepare(ctx context.Context, source string, cfg *config.Config, ask AskFunc) (*Session, error) {
-	p, err := Probe(ctx, source)
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
+	outDir := scan.ResolveOutputDir(cfg.OutputDir, scan.ConvertedDir)
+	p, err := Probe(ctx, source, outDir)
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +327,7 @@ func Prepare(ctx context.Context, source string, cfg *config.Config, ask AskFunc
 		}
 		answers[i] = ans
 	}
-	return p.BuildSession(cfg, answers)
+	return p.BuildSession(cfg, answers, outDir)
 }
 
 // resolveAnswers merges config defaults with the interactive ask: only the
