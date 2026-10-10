@@ -1,0 +1,20 @@
+# Example deployment:
+#   docker compose up -d --build
+# then open http://localhost:8080
+services:
+  ffconvert:
+    build: .
+    image: ffconvert:latest
+    ports:
+      - "8080:8080"
+    environment:
+      # root folder browsable/convertible in the UI (defaults to /data)
+      FF_CONVERT_LIBRARY_DIR: /data
+      # worker pool size (defaults to CPU count / 2)
+      FF_CONVERT_CONCURRENCY: "4"
+      # optional preset config mounted below
+      FF_CONVERT_CONFIG: /config/config.yaml
+    volumes:
+      - /path/to/your/movies:/data
+      - ./config.example.yaml:/config/config.yaml:ro
+    restart: unless-stopped

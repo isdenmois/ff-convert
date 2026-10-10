@@ -1,0 +1,12 @@
+# built SPA (rebuilt with `bun run build` in web/); keep the placeholder for go:embed
+web/dist/*
+!web/dist/.gitkeep
+web/node_modules/
+
+# wails desktop artifacts
+cmd/ffconvert-desktop/build/
+cmd/ffconvert-desktop/frontend/node_modules/
+cmd/ffconvert-desktop/frontend/dist/*
+!cmd/ffconvert-desktop/frontend/dist/.gitkeep
+cmd/ffconvert-desktop/frontend/wailsjs/
+zcode
