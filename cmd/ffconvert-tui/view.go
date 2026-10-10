@@ -35,7 +35,7 @@ var (
 			Foreground(lipgloss.Color("196"))
 
 	okStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("42"))
+		Foreground(lipgloss.Color("42"))
 
 	dimStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241"))
@@ -119,7 +119,9 @@ func (m model) viewAsk() string {
 		var title string
 		switch m.step {
 		case stepPreset:
-			title = "Video output preset"
+			files := a.Group.Files
+			name := filepath.Base(files[m.taskIdx].Path)
+			title = fmt.Sprintf("Video output preset — %s (file %d/%d)", name, m.taskIdx+1, len(files))
 		case stepNormalize:
 			title = "Normalize audio loudness?"
 		case stepAttach:
@@ -154,9 +156,15 @@ func (m model) viewConfirm() string {
 		} else {
 			b.WriteString("  subtitles:   " + joinLabels(a.Group.Subtitles, ans.Subs) + "\n")
 		}
-		b.WriteString(fmt.Sprintf("  preset:      %s\n", ans.Preset))
 		b.WriteString(fmt.Sprintf("  normalize:   %s\n", yesNo(ans.Normalize)))
 		b.WriteString(fmt.Sprintf("  attachments: %s\n", yesNo(ans.Attachments)))
+		for fi, f := range a.Group.Files {
+			preset := ""
+			if fi < len(ans.Presets) {
+				preset = ans.Presets[fi]
+			}
+			b.WriteString(fmt.Sprintf("  %-12s%s → %s\n", "file:", filepath.Base(f.Path), preset))
+		}
 		if gi < len(m.asks)-1 {
 			b.WriteString("\n")
 		}

@@ -30,10 +30,11 @@ type AskInput struct {
 	PresetChoices []string
 	// AskPreset/AskNormalize/AskAttachments are false when the config
 	// pre-answers the question (the answer is then taken from Defaults).
+	// AskPreset refers to the per-task (per-file) video codec question.
 	AskPreset      bool
 	AskNormalize   bool
 	AskAttachments bool
-	// Defaults holds config-provided answers (Preset name, Normalize,
+	// Defaults holds config-provided answers (per-file Presets, Normalize,
 	// Attachments) for the fields that are not asked.
 	Defaults plan.Answers
 }
@@ -46,12 +47,12 @@ type AskFunc func(AskInput) (plan.Answers, error)
 type FileTaskState string
 
 const (
-	StatePending   FileTaskState = "pending"
-	StateRunning   FileTaskState = "running"
-	StateDone      FileTaskState = "done"
-	StateFailed    FileTaskState = "failed"
-	StateCanceled  FileTaskState = "canceled"
-	StateSkipped   FileTaskState = "skipped"
+	StatePending  FileTaskState = "pending"
+	StateRunning  FileTaskState = "running"
+	StateDone     FileTaskState = "done"
+	StateFailed   FileTaskState = "failed"
+	StateCanceled FileTaskState = "canceled"
+	StateSkipped  FileTaskState = "skipped"
 )
 
 // FileTask tracks one file's progress within a run.
@@ -76,9 +77,9 @@ type Reporter interface {
 
 // ReporterFuncs adapts functions to Reporter.
 type ReporterFuncs struct {
-	Start     func(task *plan.Task)
-	Progress  func(task *plan.Task, stats ffmpegx.Stats)
-	Done      func(task *plan.Task, err error)
+	Start    func(task *plan.Task)
+	Progress func(task *plan.Task, stats ffmpegx.Stats)
+	Done     func(task *plan.Task, err error)
 }
 
 func (r ReporterFuncs) TaskStart(t *plan.Task) {
@@ -243,6 +244,11 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 	}
 	inputs := make([]AskInput, 0, len(p.Groups))
 	for _, g := range p.Groups {
+		defPreset := cfg.DefaultPresetName()
+		presets := make([]string, len(g.Files))
+		for i := range presets {
+			presets[i] = defPreset
+		}
 		input := AskInput{
 			Group:          g,
 			AudioDefaults:  group.DefaultAudio(g),
@@ -253,8 +259,8 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 			AskAttachments: cfg.Attachments == nil,
 		}
 		input.Defaults = plan.Answers{
-			Preset:      cfg.DefaultPreset,
-			Normalize:   cfg.Audio != nil && cfg.Audio.Normalize != nil && *cfg.Audio.Normalize,
+			Presets:     presets,
+			Normalize:   cfg.NormalizeDefault(),
 			Attachments: cfg.Attachments == nil || *cfg.Attachments == "copy",
 		}
 		inputs = append(inputs, input)
@@ -263,7 +269,9 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 }
 
 // BuildSession assembles the runnable session from per-group answers. The
-// answers slice is index-aligned with the AskInputs result.
+// answers slice is index-aligned with the AskInputs result; each answer's
+// Presets entry is the per-task video codec (missing or empty entries fall
+// back to the configured default preset).
 func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers) (*Session, error) {
 	if cfg == nil {
 		cfg = &config.Config{}
@@ -273,11 +281,16 @@ func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers) (*Sessio
 	}
 	presets := plan.PresetsMap(cfg)
 	sess := &Session{Source: p.Source, Skipped: p.Skipped}
+	defPreset := cfg.DefaultPresetName()
 	for gi, g := range p.Groups {
 		ans := answers[gi]
-		for _, m := range g.Files {
+		for fi, m := range g.Files {
+			name := defPreset
+			if fi < len(ans.Presets) && ans.Presets[fi] != "" {
+				name = ans.Presets[fi]
+			}
 			out := scan.OutputPath(m.Path)
-			task, err := plan.Build(m, ans, presets, cfg.Bitrate(), out)
+			task, err := plan.Build(m, name, ans, presets, cfg.Bitrate(), out)
 			if err != nil {
 				return nil, err
 			}
@@ -318,7 +331,7 @@ func resolveAnswers(in AskInput, ask AskFunc) (plan.Answers, error) {
 	ans := plan.Answers{
 		Audio:       append([]int(nil), in.AudioDefaults...),
 		Subs:        append([]int(nil), in.SubsDefaults...),
-		Preset:      in.Defaults.Preset,
+		Presets:     append([]string(nil), in.Defaults.Presets...),
 		Normalize:   in.Defaults.Normalize,
 		Attachments: in.Defaults.Attachments,
 	}
@@ -338,8 +351,16 @@ func resolveAnswers(in AskInput, ask AskFunc) (plan.Answers, error) {
 	if user.Subs != nil {
 		ans.Subs = user.Subs
 	}
-	if in.AskPreset && user.Preset != "" {
-		ans.Preset = user.Preset
+	if in.AskPreset {
+		for i, name := range user.Presets {
+			if i >= len(ans.Presets) {
+				ans.Presets = append(ans.Presets, name)
+				continue
+			}
+			if name != "" {
+				ans.Presets[i] = name
+			}
+		}
 	}
 	if in.AskNormalize {
 		ans.Normalize = user.Normalize

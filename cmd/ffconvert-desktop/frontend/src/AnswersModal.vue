@@ -12,12 +12,14 @@ const q = props.job.questions!
 const groupIdx = ref(0)
 const group = computed(() => q.groups[groupIdx.value])
 
+// Per-task video preset, preselected with the default preset ("copy" unless
+// the config sets default_preset).
 const drafts = reactive<Answers[]>(
   q.groups.map((g) => ({
     audio: [...g.audio_defaults],
     subs: [...g.subs_defaults],
-    preset: q.ask_preset ? (q.preset_choices.includes('av1') ? 'av1' : q.preset_choices[0]) : q.defaults.preset,
-    normalize: q.ask_normalize ? false : q.defaults.normalize,
+    presets: g.tasks.map(() => q.default_preset),
+    normalize: q.defaults.normalize,
     attachments: q.ask_attachments ? true : q.defaults.attachments,
   })),
 )
@@ -44,7 +46,7 @@ function submit() {
       return
     }
   }
-  emit('submit', props.job.id, drafts.map((d) => ({ ...d, audio: [...d.audio], subs: [...d.subs] })))
+  emit('submit', props.job.id, drafts.map((d) => ({ ...d, audio: [...d.audio], subs: [...d.subs], presets: [...d.presets] })))
   emit('close')
 }
 </script>
@@ -94,11 +96,14 @@ function submit() {
         </label>
       </section>
 
-      <section v-if="q.ask_preset" class="inline">
-        <h3>Video preset</h3>
-        <select v-model="draft.preset">
-          <option v-for="p in q.preset_choices" :key="p" :value="p">{{ p }}</option>
-        </select>
+      <section v-if="q.ask_preset">
+        <h3>Video preset (per file)</h3>
+        <div v-for="(t, ti) in group.tasks" :key="t.path" class="preset-row">
+          <label class="track">{{ t.name }}</label>
+          <select v-model="draft.presets[ti]">
+            <option v-for="p in q.preset_choices" :key="p" :value="p">{{ p }}</option>
+          </select>
+        </div>
       </section>
 
       <section v-if="q.ask_normalize" class="inline">
@@ -179,6 +184,17 @@ section.inline {
 section.inline h3 {
   margin: 0;
   min-width: 240px;
+}
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.preset-row label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 h3 {
   font-size: 12px;

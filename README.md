@@ -3,20 +3,23 @@
 Batch movie transcoder wrapping ffmpeg/ffprobe. Converts a single movie file
 or a folder of movie files (alphabetically) to MKV with:
 
-- **video**: AV1 (SVT-AV1 8-bit), HEVC (libx265 / NVENC / VAAPI), or copy
+- **video**: `copy` by default (remux), or per file AV1 (SVT-AV1 8-bit),
+  HEVC (libx265 / NVENC / VAAPI), or any custom preset
 - **audio**: every selected track → Opus 128k stereo, with a proper center-
   channel downmix (`pan=stereo|c0=c2+0.30*c0+0.30*c4|c1=c2+0.30*c1+0.30*c5`
-  for 5.1) and optional loudness normalization
+  for 5.1) and loudness normalization on by default
   (`loudnorm=i=-13:lra=15:tp=-1`, single-pass)
 - **subtitles & attachments**: selected subtitle tracks and attachments
   (fonts, posters) are stream-copied; chapters are always kept
-- outputs land in a `converted/` folder next to the sources and are **never
-  overwritten** — files that already have an output are skipped
+- outputs land in the output folder (`FF_CONVERT_OUTPUT_DIR`, by default
+  `converted/` in the working directory) and are **never overwritten** —
+  files that already have an output are skipped
 
 Before converting, all files are probed with ffprobe and grouped by identical
 audio+subtitle track layouts (language, title, codec, order, counts). Per
 group you pick the tracks to keep (English is pre-selected; no English →
-first audio track), the video preset, loudnorm and attachment handling.
+first audio track), loudnorm (on by default) and attachment handling; per
+file you pick the video codec (`copy` by default).
 
 Three frontends share one core:
 
@@ -36,6 +39,9 @@ two Vue frontends). The desktop build additionally needs `gtk3` and
 `webkit2gtk` (`webkit2_41` build tag when your distro ships 4.1).
 
 ```sh
+# TUI + web binaries into bin/ (web SPA must be built first for the web UI)
+just build
+
 # TUI
 go build -o ffconvert-tui ./cmd/ffconvert-tui
 ./ffconvert-tui /path/to/movie-or-folder
@@ -49,6 +55,8 @@ FF_CONVERT_LIBRARY_DIR=/path/to/movies ./ffconvert-web
 cd cmd/ffconvert-desktop && wails build -tags webkit2_41
 ./build/bin/ffconvert-desktop
 ```
+
+`just test` runs the test suite, `just format` gofmts the code.
 
 Web development with hot reload: run `./ffconvert-web` (port 8080) and
 `cd web && bun run dev` (Vite on 5173, proxying `/api`).
@@ -64,21 +72,25 @@ Environment variables:
 | variable | default | meaning |
 |---|---|---|
 | `FF_CONVERT_LIBRARY_DIR` | (required, web) | root folder browsable/convertible via the web UI |
+| `FF_CONVERT_OUTPUT_DIR` | `./converted` | folder converted files are written to |
 | `FF_CONVERT_PORT` | `8080` | web listen port |
 | `FF_CONVERT_CONCURRENCY` | CPU/2 | worker pool size |
 | `FF_CONVERT_CONFIG` | `~/.config/ff-convert/config.yaml` | preset config path |
 
-Converted outputs are written into `converted/` inside the library tree, so
-mount the library read-write.
+Converted outputs are written into the output folder (`FF_CONVERT_OUTPUT_DIR`,
+default `converted/` in the working directory), so mount it read-write.
 
 ## Configuration
 
-See [`config.example.yaml`](config.example.yaml). When a config exists, its
-`default_preset` is used without asking, and optional `audio.normalize` /
-`attachments` values pre-answer those questions. Track selection is always
-interactive. Built-in presets: `copy`, `av1` (SVT-AV1 p6 CRF 28 8-bit),
-`hevc` (libx265 CRF 23 8-bit), `hevc-nvenc`, `hevc-vaapi`; custom presets are
-raw ffmpeg encoder args, so hardware encoders can be configured freely.
+See [`config.example.yaml`](config.example.yaml). Without a config, every
+file's video codec is asked per task with `copy` preselected, loudnorm is
+asked per group and preselected on, and attachments are preselected copy.
+When a config exists, its `default_preset` is used for all files without
+asking, and optional `audio.normalize` / `attachments` values pre-answer
+those questions. Track selection is always interactive. Built-in presets:
+`copy`, `av1` (SVT-AV1 p6 CRF 28 8-bit), `hevc` (libx265 CRF 23 8-bit),
+`hevc-nvenc`, `hevc-vaapi`; custom presets are raw ffmpeg encoder args, so
+hardware encoders can be configured freely.
 
 ## Layout
 

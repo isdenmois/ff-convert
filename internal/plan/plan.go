@@ -22,8 +22,10 @@ type Answers struct {
 	Audio []int `json:"audio"`
 	// Subs holds the absolute ffprobe indexes of the subtitle streams to keep.
 	Subs []int `json:"subs"`
-	// Preset is the video preset name.
-	Preset string `json:"preset"`
+	// Presets holds the video preset name for each file of the group,
+	// index-aligned with the group's files (the video codec is a per-task
+	// choice). Empty entries fall back to the configured default preset.
+	Presets []string `json:"presets"`
 	// Normalize enables the loudnorm filter.
 	Normalize bool `json:"normalize"`
 	// Attachments copies embedded attachments (fonts, posters) when true.
@@ -39,17 +41,18 @@ type Task struct {
 	Args     []string // ffmpeg arguments (excluding the binary)
 }
 
-// Build constructs the ffmpeg arguments for one file.
-func Build(m *probe.Media, ans Answers, presets map[string]config.Preset, bitrate, output string) (*Task, error) {
-	preset, ok := presets[ans.Preset]
+// Build constructs the ffmpeg arguments for one file. presetName selects the
+// video preset (codec) for this task.
+func Build(m *probe.Media, presetName string, ans Answers, presets map[string]config.Preset, bitrate, output string) (*Task, error) {
+	preset, ok := presets[presetName]
 	if !ok {
-		return nil, fmt.Errorf("unknown preset %q", ans.Preset)
+		return nil, fmt.Errorf("unknown preset %q", presetName)
 	}
 	if len(ans.Audio) == 0 {
 		return nil, fmt.Errorf("%s: no audio tracks selected", m.Path)
 	}
 	if !preset.IsCopy() && preset.Codec == "" {
-		return nil, fmt.Errorf("preset %q has no codec", ans.Preset)
+		return nil, fmt.Errorf("preset %q has no codec", presetName)
 	}
 
 	audioByIndex := make(map[int]probe.Stream, len(m.Audio))

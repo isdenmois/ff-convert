@@ -6,21 +6,40 @@ import (
 	"testing"
 )
 
-func TestOutputPath(t *testing.T) {
+func TestOutputPathIn(t *testing.T) {
 	cases := map[string]string{
-		"/movies/Movie.mkv":  "/movies/converted/Movie.mkv",
-		"/movies/Movie.mp4":  "/movies/converted/Movie.mkv",
-		"/a b/Show.S01E01.avi": "/a b/converted/Show.S01E01.mkv",
+		"/movies/Movie.mkv":    "/out/Movie.mkv",
+		"/movies/Movie.mp4":    "/out/Movie.mkv",
+		"/a b/Show.S01E01.avi": "/out/Show.S01E01.mkv",
 	}
 	for in, want := range cases {
-		if got := OutputPath(in); got != want {
-			t.Errorf("OutputPath(%q) = %q, want %q", in, got, want)
+		if got := OutputPathIn("/out", in); got != want {
+			t.Errorf("OutputPathIn(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestOutputPath(t *testing.T) {
+	// Default: "converted" relative to the working directory.
+	want := filepath.Join(ConvertedDir, "Movie.mkv")
+	if got := OutputPath("/movies/Movie.mkv"); got != want {
+		t.Errorf("OutputPath = %q, want %q", got, want)
+	}
+
+	// Overridden via FF_CONVERT_OUTPUT_DIR.
+	t.Setenv(EnvOutputDir, "/mnt/out")
+	if got := OutputPath("/movies/Movie.mkv"); got != filepath.Join("/mnt/out", "Movie.mkv") {
+		t.Errorf("OutputPath with env = %q", got)
+	}
+	if got := OutputDir(); got != "/mnt/out" {
+		t.Errorf("OutputDir = %q", got)
 	}
 }
 
 func TestScanFolder(t *testing.T) {
 	dir := t.TempDir()
+	outDir := t.TempDir()
+	t.Setenv(EnvOutputDir, outDir)
 	files := []string{
 		"b ep10.mkv", "B ep2.mkv", "a movie.mp4", "notes.txt", ".hidden.mkv",
 	}
@@ -30,10 +49,7 @@ func TestScanFolder(t *testing.T) {
 		}
 	}
 	// Already converted: b ep10.
-	if err := os.Mkdir(filepath.Join(dir, ConvertedDir), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, ConvertedDir, "b ep10.mkv"), []byte("x"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(outDir, "b ep10.mkv"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -52,6 +68,9 @@ func TestScanFolder(t *testing.T) {
 	}
 	if len(res.Skipped) != 1 || filepath.Base(res.Skipped[0].Path) != "b ep10.mkv" {
 		t.Fatalf("Skipped = %+v", res.Skipped)
+	}
+	if res.Skipped[0].Output != filepath.Join(outDir, "b ep10.mkv") {
+		t.Errorf("Skipped output = %q", res.Skipped[0].Output)
 	}
 }
 

@@ -1,15 +1,21 @@
 # ff-convert preset configuration (copy to ~/.config/ff-convert/config.yaml
 # or mount into Docker and point FF_CONVERT_CONFIG at it).
 #
+# Defaults without this file:
+#   - the video codec is asked per file and preselected with "copy";
+#   - loudness normalization is asked once per group and preselected "on";
+#   - attachments are asked and preselected "copy";
+#   - outputs land in ./converted (override with FF_CONVERT_OUTPUT_DIR).
+#
 # When this file exists:
-#   - default_preset is used as the video format and the format question is
-#     skipped entirely;
+#   - default_preset, when set, is used for every file and the per-file codec
+#     question is skipped entirely;
 #   - audio.normalize, when set, skips the loudnorm question;
 #   - attachments, when set ("copy" or "omit"), skips the attachment question.
 # Audio/subtitle track selection is always asked — it depends on file content.
 
-# Preset used without asking:
-default_preset: av1
+# Preset used for every file without asking ("copy" when unset):
+#default_preset: copy
 
 # Optional custom presets (merge over the built-ins; same name overrides).
 # Built-ins: copy, av1, hevc, hevc-nvenc, hevc-vaapi.
@@ -26,7 +32,7 @@ presets:
 # Optional audio defaults (skips the corresponding question).
 audio:
   bitrate: 128k
-  normalize: false
+  normalize: true
 
 # Optional attachments default: copy | omit (skips the question).
 attachments: copy

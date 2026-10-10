@@ -65,11 +65,18 @@ func streamViews(ss []probe.Stream) []StreamView {
 	return out
 }
 
+// TaskView describes one convertible file (task) inside a group.
+type TaskView struct {
+	Path string `json:"path"`
+	Name string `json:"name"`
+}
+
 // GroupView describes one question group.
 type GroupView struct {
 	Key           string       `json:"key"`
 	FileCount     int          `json:"file_count"`
 	Files         []string     `json:"files"`
+	Tasks         []TaskView   `json:"tasks"`
 	Audio         []StreamView `json:"audio"`
 	Subs          []StreamView `json:"subs"`
 	AudioDefaults []int        `json:"audio_defaults"`
@@ -78,23 +85,26 @@ type GroupView struct {
 
 // QuestionsView is everything the UI needs to ask about a job.
 type QuestionsView struct {
-	Groups         []GroupView  `json:"groups"`
-	PresetChoices  []string     `json:"preset_choices"`
-	AskPreset      bool         `json:"ask_preset"`
-	AskNormalize   bool         `json:"ask_normalize"`
-	AskAttachments bool         `json:"ask_attachments"`
-	Defaults       plan.Answers `json:"defaults"`
+	Groups         []GroupView `json:"groups"`
+	PresetChoices  []string    `json:"preset_choices"`
+	AskPreset      bool        `json:"ask_preset"`
+	AskNormalize   bool        `json:"ask_normalize"`
+	AskAttachments bool        `json:"ask_attachments"`
+	// DefaultPreset is the preselected per-task video codec (config
+	// default_preset, "copy" when unset).
+	DefaultPreset string       `json:"default_preset"`
+	Defaults      plan.Answers `json:"defaults"`
 }
 
 // FileView is a UI-friendly file progress record.
 type FileView struct {
-	Path    string `json:"path"`
-	Name    string `json:"name"`
-	Output  string `json:"output"`
-	State   string `json:"state"`
+	Path    string  `json:"path"`
+	Name    string  `json:"name"`
+	Output  string  `json:"output"`
+	State   string  `json:"state"`
 	Percent float64 `json:"percent"`
-	Speed   string `json:"speed,omitempty"`
-	Error   string `json:"error,omitempty"`
+	Speed   string  `json:"speed,omitempty"`
+	Error   string  `json:"error,omitempty"`
 }
 
 // SkippedView describes a skipped file.
@@ -106,19 +116,19 @@ type SkippedView struct {
 
 // JobView is the complete UI snapshot of a job.
 type JobView struct {
-	ID        string        `json:"id"`
-	Path      string        `json:"path"`
-	Name      string        `json:"name"`
-	State     State         `json:"state"`
-	CreatedAt time.Time     `json:"created_at"`
+	ID        string         `json:"id"`
+	Path      string         `json:"path"`
+	Name      string         `json:"name"`
+	State     State          `json:"state"`
+	CreatedAt time.Time      `json:"created_at"`
 	Questions *QuestionsView `json:"questions,omitempty"`
-	Files     []FileView    `json:"files,omitempty"`
-	Skipped   []SkippedView `json:"skipped,omitempty"`
-	Overall   float64       `json:"overall"`
-	Done      int           `json:"done"`
-	Failed    int           `json:"failed"`
-	Total     int           `json:"total"`
-	Error     string        `json:"error,omitempty"`
+	Files     []FileView     `json:"files,omitempty"`
+	Skipped   []SkippedView  `json:"skipped,omitempty"`
+	Overall   float64        `json:"overall"`
+	Done      int            `json:"done"`
+	Failed    int            `json:"failed"`
+	Total     int            `json:"total"`
+	Error     string         `json:"error,omitempty"`
 }
 
 type job struct {
@@ -242,6 +252,7 @@ func (m *Manager) probeJob(j *job) {
 		AskPreset:      m.cfg.DefaultPreset == "",
 		AskNormalize:   m.cfg.Audio == nil || m.cfg.Audio.Normalize == nil,
 		AskAttachments: m.cfg.Attachments == nil,
+		DefaultPreset:  m.cfg.DefaultPresetName(),
 	}
 	for i, in := range inputs {
 		g := GroupView{
@@ -253,7 +264,9 @@ func (m *Manager) probeJob(j *job) {
 			SubsDefaults:  in.SubsDefaults,
 		}
 		for _, f := range in.Group.Files {
-			g.Files = append(g.Files, filepath.Base(f.Path))
+			name := filepath.Base(f.Path)
+			g.Files = append(g.Files, name)
+			g.Tasks = append(g.Tasks, TaskView{Path: f.Path, Name: name})
 		}
 		qv.Groups = append(qv.Groups, g)
 	}

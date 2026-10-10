@@ -15,8 +15,22 @@ var VideoExts = map[string]bool{
 	".mov": true, ".ts": true, ".webm": true, ".wmv": true, ".flv": true,
 }
 
-// ConvertedDir is the subfolder (next to the sources) where outputs are written.
+// EnvOutputDir is the environment variable overriding the output folder.
+const EnvOutputDir = "FF_CONVERT_OUTPUT_DIR"
+
+// ConvertedDir is the default output folder (relative to the working
+// directory) where converted files are written.
 const ConvertedDir = "converted"
+
+// OutputDir returns the folder converted files are written to: the value of
+// FF_CONVERT_OUTPUT_DIR when set, otherwise "converted" in the working
+// directory.
+func OutputDir() string {
+	if dir := os.Getenv(EnvOutputDir); dir != "" {
+		return dir
+	}
+	return ConvertedDir
+}
 
 // Skipped describes a file that was skipped because its output already exists.
 type Skipped struct {
@@ -33,12 +47,18 @@ type Result struct {
 // IsVideoFile reports whether the path has a movie extension.
 func IsVideoFile(path string) bool { return VideoExts[strings.ToLower(filepath.Ext(path))] }
 
-// OutputPath returns the converted output path for a source file:
-// <dir>/converted/<base-without-ext>.mkv
+// OutputPath returns the converted output path for a source file in the
+// configured output folder (see OutputDir): <outputDir>/<base-without-ext>.mkv
 func OutputPath(file string) string {
+	return OutputPathIn(OutputDir(), file)
+}
+
+// OutputPathIn returns the converted output path for a source file in the
+// given folder: <dir>/<base-without-ext>.mkv
+func OutputPathIn(dir, file string) string {
 	base := filepath.Base(file)
 	base = strings.TrimSuffix(base, filepath.Ext(base))
-	return filepath.Join(filepath.Dir(file), ConvertedDir, base+".mkv")
+	return filepath.Join(dir, base+".mkv")
 }
 
 // Scan resolves a source path (single file or folder) to the list of movie

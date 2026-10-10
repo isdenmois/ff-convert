@@ -10,10 +10,10 @@ import (
 
 func testMedia() *probe.Media {
 	return &probe.Media{
-		Path:            "/movies/Movie.mkv",
-		Duration:        100,
-		MainVideoIndex:  0,
-		Video:           []probe.Stream{{Index: 0, Type: "video", Codec: "h264"}},
+		Path:           "/movies/Movie.mkv",
+		Duration:       100,
+		MainVideoIndex: 0,
+		Video:          []probe.Stream{{Index: 0, Type: "video", Codec: "h264"}},
 		Audio: []probe.Stream{
 			{Index: 1, Type: "audio", Codec: "ac3", Language: "eng", Channels: 6, Layout: "5.1"},
 			{Index: 2, Type: "audio", Codec: "aac", Language: "rus", Channels: 2, Layout: "stereo"},
@@ -33,12 +33,11 @@ func TestBuildAv1Full(t *testing.T) {
 	ans := Answers{
 		Audio:       []int{1, 2},
 		Subs:        []int{5, 6},
-		Preset:      "av1",
 		Normalize:   true,
 		Attachments: true,
 	}
 	presets := PresetsMap(&config.Config{})
-	task, err := Build(m, ans, presets, "128k", "/movies/converted/Movie.mkv")
+	task, err := Build(m, "av1", ans, presets, "128k", "/movies/converted/Movie.mkv")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,8 +71,8 @@ func TestBuildAv1Full(t *testing.T) {
 
 func TestBuildCopyNoFilters(t *testing.T) {
 	m := testMedia()
-	ans := Answers{Audio: []int{2}, Preset: "copy", Attachments: false}
-	task, err := Build(m, ans, PresetsMap(&config.Config{}), "128k", "/o.mkv")
+	ans := Answers{Audio: []int{2}, Attachments: false}
+	task, err := Build(m, "copy", ans, PresetsMap(&config.Config{}), "128k", "/o.mkv")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,8 +116,8 @@ func TestDownmixLayouts(t *testing.T) {
 
 func TestBuildVAAPI(t *testing.T) {
 	m := testMedia()
-	ans := Answers{Audio: []int{2}, Preset: "hevc-vaapi"}
-	task, err := Build(m, ans, PresetsMap(&config.Config{}), "128k", "/o.mkv")
+	ans := Answers{Audio: []int{2}}
+	task, err := Build(m, "hevc-vaapi", ans, PresetsMap(&config.Config{}), "128k", "/o.mkv")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,16 +139,16 @@ func TestBuildVAAPI(t *testing.T) {
 func TestBuildErrors(t *testing.T) {
 	m := testMedia()
 	presets := PresetsMap(&config.Config{})
-	if _, err := Build(m, Answers{Audio: []int{1}, Preset: "nope"}, presets, "128k", "/o.mkv"); err == nil {
+	if _, err := Build(m, "nope", Answers{Audio: []int{1}}, presets, "128k", "/o.mkv"); err == nil {
 		t.Error("unknown preset must error")
 	}
-	if _, err := Build(m, Answers{Preset: "av1"}, presets, "128k", "/o.mkv"); err == nil {
+	if _, err := Build(m, "av1", Answers{}, presets, "128k", "/o.mkv"); err == nil {
 		t.Error("no audio selected must error")
 	}
-	if _, err := Build(m, Answers{Audio: []int{99}, Preset: "av1"}, presets, "128k", "/o.mkv"); err == nil {
+	if _, err := Build(m, "av1", Answers{Audio: []int{99}}, presets, "128k", "/o.mkv"); err == nil {
 		t.Error("missing audio stream must error")
 	}
-	if _, err := Build(m, Answers{Audio: []int{1}, Preset: "av1", Subs: []int{99}}, presets, "128k", "/o.mkv"); err == nil {
+	if _, err := Build(m, "av1", Answers{Audio: []int{1}, Subs: []int{99}}, presets, "128k", "/o.mkv"); err == nil {
 		t.Error("missing sub stream must error")
 	}
 }

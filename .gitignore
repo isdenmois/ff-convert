@@ -1,3 +1,6 @@
+# local build output
+bin/
+
 # built SPA (rebuilt with `bun run build` in web/); keep the placeholder for go:embed
 web/dist/*
 !web/dist/.gitkeep

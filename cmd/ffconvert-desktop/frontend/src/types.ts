@@ -8,10 +8,16 @@ export interface StreamView {
   layout?: string
 }
 
+export interface TaskView {
+  path: string
+  name: string
+}
+
 export interface GroupView {
   key: string
   file_count: number
   files: string[]
+  tasks: TaskView[]
   audio: StreamView[]
   subs: StreamView[]
   audio_defaults: number[]
@@ -21,7 +27,7 @@ export interface GroupView {
 export interface Answers {
   audio: number[]
   subs: number[]
-  preset: string
+  presets: string[]
   normalize: boolean
   attachments: boolean
 }
@@ -32,6 +38,7 @@ export interface QuestionsView {
   ask_preset: boolean
   ask_normalize: boolean
   ask_attachments: boolean
+  default_preset: string
   defaults: Answers
 }
 

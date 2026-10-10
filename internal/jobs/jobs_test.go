@@ -9,6 +9,7 @@ import (
 
 	"github.com/isden/ff-convert/internal/plan"
 	"github.com/isden/ff-convert/internal/pool"
+	"github.com/isden/ff-convert/internal/scan"
 )
 
 func makeFixture(t *testing.T, dir, name string) string {
@@ -52,6 +53,8 @@ func TestJobLifecycle(t *testing.T) {
 		t.Skip("ffmpeg not available")
 	}
 	dir := t.TempDir()
+	outDir := t.TempDir()
+	t.Setenv(scan.EnvOutputDir, outDir)
 	makeFixture(t, dir, "a.mkv")
 	makeFixture(t, dir, "b.mkv")
 
@@ -74,14 +77,23 @@ func TestJobLifecycle(t *testing.T) {
 	if len(q.Questions.Groups[0].AudioDefaults) != 1 {
 		t.Fatalf("audio defaults = %+v", q.Questions.Groups[0])
 	}
+	if len(q.Questions.Groups[0].Tasks) != 2 || q.Questions.Groups[0].Tasks[0].Name != "a.mkv" {
+		t.Fatalf("tasks = %+v", q.Questions.Groups[0].Tasks)
+	}
 	if !q.Questions.AskPreset || !q.Questions.AskNormalize || !q.Questions.AskAttachments {
 		t.Fatal("all questions must be asked with nil config")
 	}
+	if q.Questions.DefaultPreset != "copy" {
+		t.Fatalf("default preset = %q, want copy", q.Questions.DefaultPreset)
+	}
+	if !q.Questions.Defaults.Normalize {
+		t.Fatal("normalization default must be on")
+	}
 
-	// Defaults + copy preset: fast conversion.
+	// Defaults + per-task copy presets: fast conversion.
 	answers := []plan.Answers{{
-		Audio:  q.Questions.Groups[0].AudioDefaults,
-		Preset: "copy",
+		Audio:   q.Questions.Groups[0].AudioDefaults,
+		Presets: []string{"copy", "copy"},
 	}}
 	if err := m.SubmitAnswers(v.ID, answers); err != nil {
 		t.Fatal(err)

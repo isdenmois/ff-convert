@@ -31,6 +31,12 @@ func TestLoadMissing(t *testing.T) {
 	if cfg.Bitrate() != "128k" {
 		t.Fatalf("Bitrate() = %q, want 128k", cfg.Bitrate())
 	}
+	if got := cfg.DefaultPresetName(); got != "copy" {
+		t.Fatalf("DefaultPresetName() = %q, want copy", got)
+	}
+	if !cfg.NormalizeDefault() {
+		t.Fatal("NormalizeDefault() must be true when unset")
+	}
 }
 
 func TestLoadFull(t *testing.T) {
@@ -76,6 +82,12 @@ attachments: omit
 	}
 	if cfg.Attachments == nil || *cfg.Attachments != "omit" {
 		t.Fatal("attachments should be omit")
+	}
+	if got := cfg.DefaultPresetName(); got != "av1-fast" {
+		t.Fatalf("DefaultPresetName() = %q, want av1-fast", got)
+	}
+	if cfg.NormalizeDefault() {
+		t.Fatal("NormalizeDefault() must honor explicit false")
 	}
 	names := cfg.PresetNames()
 	// copy, av1, hevc, hevc-nvenc, hevc-vaapi, av1-fast

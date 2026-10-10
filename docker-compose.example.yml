@@ -12,6 +12,9 @@ services:
       FF_CONVERT_LIBRARY_DIR: /data
       # worker pool size (defaults to CPU count / 2)
       FF_CONVERT_CONCURRENCY: "4"
+      # converted outputs are written here (defaults to ./converted in the
+      # container's working directory)
+      FF_CONVERT_OUTPUT_DIR: /data/converted
       # optional preset config mounted below
       FF_CONVERT_CONFIG: /config/config.yaml
     volumes:

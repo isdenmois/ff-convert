@@ -150,10 +150,11 @@ func (s *server) handleLibrary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// The converted output folder is an implementation detail, hide it.
+	outDir := filepath.Base(scan.OutputDir())
 	var out []libraryEntry
 	for _, e := range entries {
 		name := e.Name()
-		if strings.HasPrefix(name, ".") || name == scan.ConvertedDir {
+		if strings.HasPrefix(name, ".") || name == outDir {
 			continue
 		}
 		isDir := e.IsDir()

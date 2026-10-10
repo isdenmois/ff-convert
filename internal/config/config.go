@@ -28,9 +28,9 @@ func DefaultPath() (string, error) {
 // Preset describes how the video stream is encoded. A preset with Codec
 // "copy" remuxes the video untouched.
 type Preset struct {
-	Codec string `yaml:"codec"`
-	Args  []string `yaml:"args,omitempty"`
-	PixFmt string `yaml:"pix_fmt,omitempty"`
+	Codec  string   `yaml:"codec"`
+	Args   []string `yaml:"args,omitempty"`
+	PixFmt string   `yaml:"pix_fmt,omitempty"`
 	// VAAPIDevice, when set, adds "-vaapi_device <dev>" before the input
 	// (used by VAAPI presets).
 	VAAPIDevice string `yaml:"vaapi_device,omitempty"`
@@ -58,9 +58,9 @@ type Config struct {
 	// Exists reports whether a config file was found.
 	Exists bool
 
-	DefaultPreset string             `yaml:"default_preset,omitempty"`
-	Presets       map[string]Preset  `yaml:"presets,omitempty"`
-	Audio         *Audio             `yaml:"audio,omitempty"`
+	DefaultPreset string            `yaml:"default_preset,omitempty"`
+	Presets       map[string]Preset `yaml:"presets,omitempty"`
+	Audio         *Audio            `yaml:"audio,omitempty"`
 	// Attachments, when set ("copy" or "omit"), skips the attachment question.
 	Attachments *string `yaml:"attachments,omitempty"`
 
@@ -70,11 +70,11 @@ type Config struct {
 // Builtins returns the built-in video presets.
 func Builtins() map[string]Preset {
 	return map[string]Preset{
-		"copy":        {Codec: "copy"},
-		"av1":         {Codec: "libsvtav1", Args: []string{"-preset", "6", "-crf", "28"}, PixFmt: "yuv420p"},
-		"hevc":        {Codec: "libx265", Args: []string{"-preset", "medium", "-crf", "23"}, PixFmt: "yuv420p"},
-		"hevc-nvenc":  {Codec: "hevc_nvenc", Args: []string{"-preset", "p5", "-cq", "26"}},
-		"hevc-vaapi":  {Codec: "hevc_vaapi", Args: []string{"-qp", "24"}, VAAPIDevice: "/dev/dri/renderD128", VF: "format=nv12|vaapi,hwupload"},
+		"copy":       {Codec: "copy"},
+		"av1":        {Codec: "libsvtav1", Args: []string{"-preset", "6", "-crf", "28"}, PixFmt: "yuv420p"},
+		"hevc":       {Codec: "libx265", Args: []string{"-preset", "medium", "-crf", "23"}, PixFmt: "yuv420p"},
+		"hevc-nvenc": {Codec: "hevc_nvenc", Args: []string{"-preset", "p5", "-cq", "26"}},
+		"hevc-vaapi": {Codec: "hevc_vaapi", Args: []string{"-qp", "24"}, VAAPIDevice: "/dev/dri/renderD128", VF: "format=nv12|vaapi,hwupload"},
 	}
 }
 
@@ -163,6 +163,22 @@ func (c *Config) Bitrate() string {
 		return c.Audio.Bitrate
 	}
 	return "128k"
+}
+
+// DefaultPresetName returns the configured default preset, or "copy" when
+// unset. It is the preselected codec for every task without an explicit
+// choice.
+func (c *Config) DefaultPresetName() string {
+	if c.DefaultPreset != "" {
+		return c.DefaultPreset
+	}
+	return "copy"
+}
+
+// NormalizeDefault reports whether loudness normalization is enabled when the
+// config does not decide (on by default).
+func (c *Config) NormalizeDefault() bool {
+	return c.Audio == nil || c.Audio.Normalize == nil || *c.Audio.Normalize
 }
 
 func sortStrings(s []string) {

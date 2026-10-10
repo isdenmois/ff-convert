@@ -16,11 +16,11 @@ var FFprobePath = "ffprobe"
 
 // Stream types reported by ffprobe.
 const (
-	TypeVideo       = "video"
-	TypeAudio       = "audio"
-	TypeSubtitle    = "subtitle"
-	TypeAttachment  = "attachment"
-	TypeData        = "data"
+	TypeVideo      = "video"
+	TypeAudio      = "audio"
+	TypeSubtitle   = "subtitle"
+	TypeAttachment = "attachment"
+	TypeData       = "data"
 )
 
 // Stream is a single interesting ffprobe stream. Absolute ffprobe indexes are
@@ -75,13 +75,13 @@ func IsEnglish(lang string) bool {
 
 // Media is the probe result for one file.
 type Media struct {
-	Path        string    `json:"path"`
-	Duration    float64   `json:"duration"` // seconds, 0 if unknown
-	Video       []Stream  `json:"video"`
-	Audio       []Stream  `json:"audio"`
-	Subtitles   []Stream  `json:"subtitles"`
-	Attachments []Stream  `json:"attachments"`
-	HasChapters bool      `json:"has_chapters"`
+	Path        string   `json:"path"`
+	Duration    float64  `json:"duration"` // seconds, 0 if unknown
+	Video       []Stream `json:"video"`
+	Audio       []Stream `json:"audio"`
+	Subtitles   []Stream `json:"subtitles"`
+	Attachments []Stream `json:"attachments"`
+	HasChapters bool     `json:"has_chapters"`
 
 	// MainVideoIndex is the absolute index of the "main" video stream (the
 	// first one that is not cover art). Falls back to the first video stream.
@@ -97,12 +97,12 @@ func (m *Media) Name() string {
 }
 
 type ffStream struct {
-	Index       int    `json:"index"`
-	CodecName   string `json:"codec_name"`
-	CodecType   string `json:"codec_type"`
-	Channels    int    `json:"channels"`
+	Index         int    `json:"index"`
+	CodecName     string `json:"codec_name"`
+	CodecType     string `json:"codec_type"`
+	Channels      int    `json:"channels"`
 	ChannelLayout string `json:"channel_layout"`
-	Disposition struct {
+	Disposition   struct {
 		AttachedPic int `json:"attached_pic"`
 	} `json:"disposition"`
 	Tags struct {
