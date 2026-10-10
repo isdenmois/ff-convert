@@ -12,4 +12,10 @@ cmd/ffconvert-desktop/frontend/node_modules/
 cmd/ffconvert-desktop/frontend/dist/*
 !cmd/ffconvert-desktop/frontend/dist/.gitkeep
 cmd/ffconvert-desktop/frontend/wailsjs/
+
+# makepkg artifacts (packaging/)
+packaging/src/
+packaging/pkg/
+packaging/ffconvert/
+packaging/*.pkg.tar.*
 zcode

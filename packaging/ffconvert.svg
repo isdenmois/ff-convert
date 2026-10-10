@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- ff-convert icon: film strip turning into a play button.
+       Palette from the app's frontend: bg #10141a, panel #1a2029,
+       gradient #7c5ad1 (accent-2) -> #d15ad4 (accent), text #e2e8f0. -->
+  <defs>
+    <linearGradient id="strip" gradientUnits="userSpaceOnUse" x1="86" y1="256" x2="426" y2="256">
+      <stop offset="0" stop-color="#7c5ad1"/>
+      <stop offset="1" stop-color="#d15ad4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded-square background -->
+  <rect width="512" height="512" rx="110" fill="#10141a"/>
+
+  <!-- film strip body -->
+  <rect x="56" y="156" width="400" height="200" rx="20" fill="#1a2029"/>
+
+  <!-- sprocket holes, top and bottom rows -->
+  <g fill="#10141a">
+    <rect x="86" y="174" width="32" height="24" rx="8"/>
+    <rect x="163" y="174" width="32" height="24" rx="8"/>
+    <rect x="240" y="174" width="32" height="24" rx="8"/>
+    <rect x="317" y="174" width="32" height="24" rx="8"/>
+    <rect x="394" y="174" width="32" height="24" rx="8"/>
+    <rect x="86" y="314" width="32" height="24" rx="8"/>
+    <rect x="163" y="314" width="32" height="24" rx="8"/>
+    <rect x="240" y="314" width="32" height="24" rx="8"/>
+    <rect x="317" y="314" width="32" height="24" rx="8"/>
+    <rect x="394" y="314" width="32" height="24" rx="8"/>
+  </g>
+
+  <!-- exposed frames carrying the accent gradient -->
+  <rect x="86" y="206" width="104" height="100" rx="14" fill="url(#strip)"/>
+  <rect x="204" y="206" width="104" height="100" rx="14" fill="url(#strip)"/>
+
+  <!-- last frame becomes the play button -->
+  <rect x="322" y="206" width="104" height="100" rx="14" fill="url(#strip)"/>
+  <path d="M357 231 L357 281 L404 256 Z" fill="#e2e8f0" stroke="#e2e8f0"
+        stroke-width="9" stroke-linejoin="round"/>
+</svg>

@@ -38,3 +38,7 @@ run-web library-dir='.':
 # Run the desktop app in dev mode (requires the wails CLI)
 run-desktop:
     cd cmd/ffconvert-desktop && ~/go/bin/wails dev -tags webkit2_41
+
+package:
+    cd packaging && makepkg -srci
+

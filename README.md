@@ -66,6 +66,21 @@ typecheck, tests for the frontend; gofmt check and `go test` for Go).
 Web development with hot reload: run `./ffconvert-web` (port 8080) and
 `cd web && bun run dev` (Vite on 5173, proxying `/api`).
 
+## Packaging (Arch Linux)
+
+A local-only PKGBUILD builds the TUI and desktop binaries into a single
+`ffconvert` package, with the desktop entry and icon:
+
+```sh
+cd packaging && makepkg -si
+```
+
+Runtime deps (`ffmpeg`, `gtk3`, `webkit2gtk-4.1`) are declared in the
+PKGBUILD; building additionally needs `base-devel`, `go`, `bun` and `git` —
+the wails CLI is bootstrapped automatically at the version pinned in go.mod.
+The source is pinned to the git tag matching `pkgver`, so to cut a release:
+commit, tag `vX.Y.Z`, then bump `pkgver` in `packaging/PKGBUILD`.
+
 ## Docker
 
 ```sh

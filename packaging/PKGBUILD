@@ -1,0 +1,40 @@
+# Maintainer: Denis Moiseev
+pkgname=ffconvert
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Batch movie transcoder (ffmpeg to MKV, Opus audio) with TUI and GTK desktop frontends'
+arch=(x86_64)
+url='https://github.com/isden/ff-convert'
+license=(MIT)
+depends=(ffmpeg gtk3 webkit2gtk-4.1)
+makedepends=(git go bun)
+source=("ffconvert::git+file://$(dirname "$startdir")")
+sha256sums=(SKIP)
+
+build() {
+    cd ffconvert
+    export GOCACHE="$srcdir/gocache"
+    export GOFLAGS="-trimpath -mod=readonly -buildmode=pie"
+
+    go build -o bin/ffconvert-tui ./cmd/ffconvert-tui
+
+    # Bootstrap the wails CLI pinned to the version in go.mod; keeps
+    # makedepends inside the official repos so plain makepkg -si works.
+    GOBIN="$srcdir/bin" go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+    export PATH="$srcdir/bin:$PATH"
+    cd cmd/ffconvert-desktop
+    # webkit2_41 is mandatory: Arch only ships webkit2gtk-4.1, the 4.0
+    # pkg-config name no longer exists.
+    wails build -tags webkit2_41
+}
+
+package() {
+    cd ffconvert
+    install -Dm755 bin/ffconvert-tui "$pkgdir/usr/bin/ffconvert"
+    install -Dm755 cmd/ffconvert-desktop/build/bin/ffconvert-desktop "$pkgdir/usr/bin/ffconvert-desktop"
+    install -Dm644 packaging/ffconvert.desktop "$pkgdir/usr/share/applications/ffconvert.desktop"
+    install -Dm644 packaging/ffconvert.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/ffconvert.svg"
+    install -Dm644 cmd/ffconvert-desktop/icon.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/ffconvert.png"
+    install -Dm644 config.example.yaml "$pkgdir/usr/share/ffconvert/config.example.yaml"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/ffconvert/LICENSE"
+}

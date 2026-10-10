@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ff-convert
+GenericName=Batch Video Transcoder
+Comment=Convert movies to MKV with Opus audio via ffmpeg
+Exec=ffconvert-desktop
+Icon=ffconvert
+Terminal=false
+Categories=AudioVideo;Video;AudioVideoEditing;
+StartupWMClass=ffconvert
