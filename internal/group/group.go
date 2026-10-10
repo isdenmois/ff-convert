@@ -80,8 +80,9 @@ func Files(files []*probe.Media) []*Group {
 
 // DefaultAudio returns the pre-selected audio stream indexes for a group:
 // every English track, or the first audio track when there is no English one.
+// The result is never nil so it JSON-encodes as [] (frontends iterate it).
 func DefaultAudio(g *Group) []int {
-	var out []int
+	out := make([]int, 0)
 	for _, s := range g.Audio {
 		if s.IsEnglish() {
 			out = append(out, s.Index)
@@ -94,9 +95,10 @@ func DefaultAudio(g *Group) []int {
 }
 
 // DefaultSubs returns the pre-selected subtitle stream indexes: every English
-// subtitle track, or none.
+// subtitle track, or none. The result is never nil so it JSON-encodes as []
+// (frontends iterate it).
 func DefaultSubs(g *Group) []int {
-	var out []int
+	out := make([]int, 0)
 	for _, s := range g.Subtitles {
 		if s.IsEnglish() {
 			out = append(out, s.Index)

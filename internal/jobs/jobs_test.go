@@ -90,10 +90,10 @@ func TestJobLifecycle(t *testing.T) {
 		t.Fatal("normalization default must be on")
 	}
 
-	// Defaults + per-task copy presets: fast conversion.
+	// Defaults + the copy preset: fast conversion.
 	answers := []plan.Answers{{
-		Audio:   q.Questions.Groups[0].AudioDefaults,
-		Presets: []string{"copy", "copy"},
+		Audio:  q.Questions.Groups[0].AudioDefaults,
+		Preset: "copy",
 	}}
 	if err := m.SubmitAnswers(v.ID, answers); err != nil {
 		t.Fatal(err)

@@ -15,20 +15,24 @@ import (
 // LoudnormFilter is the audio normalization filter (single-pass EBU R128).
 const LoudnormFilter = "loudnorm=i=-13:lra=15:tp=-1"
 
-// Answers is the user's decision for one group of files.
+// Answers is the user's decision for one group of files. Preset, Normalize
+// and Attachments are queue-item-wide choices: the same value applies to
+// every group, so UIs ask them once per queue item and replicate the answer.
 type Answers struct {
 	// Audio holds the absolute ffprobe indexes of the audio streams to keep,
 	// in the desired output order.
 	Audio []int `json:"audio"`
 	// Subs holds the absolute ffprobe indexes of the subtitle streams to keep.
 	Subs []int `json:"subs"`
-	// Presets holds the video preset name for each file of the group,
-	// index-aligned with the group's files (the video codec is a per-task
-	// choice). Empty entries fall back to the configured default preset.
-	Presets []string `json:"presets"`
-	// Normalize enables the loudnorm filter.
+	// Preset is the video preset name (codec) for the whole queue item; the
+	// same choice applies to every file. Empty falls back to the configured
+	// default preset.
+	Preset string `json:"preset"`
+	// Normalize enables the loudnorm filter for the whole queue item; the
+	// same choice applies to every file.
 	Normalize bool `json:"normalize"`
-	// Attachments copies embedded attachments (fonts, posters) when true.
+	// Attachments copies embedded attachments (fonts, posters) for the whole
+	// queue item when true; the same choice applies to every file.
 	Attachments bool `json:"attachments"`
 }
 

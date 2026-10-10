@@ -166,8 +166,8 @@ func (c *Config) Bitrate() string {
 }
 
 // DefaultPresetName returns the configured default preset, or "copy" when
-// unset. It is the preselected codec for every task without an explicit
-// choice.
+// unset. It is the preselected codec for every queue item without an
+// explicit choice.
 func (c *Config) DefaultPresetName() string {
 	if c.DefaultPreset != "" {
 		return c.DefaultPreset

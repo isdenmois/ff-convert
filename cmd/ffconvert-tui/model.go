@@ -65,7 +65,6 @@ type model struct {
 	reply []plan.Answers // index-aligned with asks
 
 	groupIdx int
-	taskIdx  int // file index within the group (preset step)
 	step     step
 	cursor   int
 	checked  map[int]bool // stream index → checked (audio/subs steps)
@@ -115,7 +114,6 @@ func (m *model) ask(i int) convert.AskInput   { return m.asks[i] }
 // enterGroup initializes the wizard state for group gi.
 func (m *model) enterGroup(gi int) {
 	m.groupIdx = gi
-	m.taskIdx = 0
 	m.checked = map[int]bool{}
 	a := m.ask(gi)
 	for _, idx := range a.AudioDefaults {
@@ -133,38 +131,35 @@ func (m *model) nextStep() {
 		m.step = stepSubs
 		m.resetCursorForStep()
 	case stepSubs:
-		m.afterSubs()
+		m.nextGroup()
 	case stepNormalize:
 		m.afterNormalize()
 	case stepAttach:
 		m.afterAttach()
 	case stepPreset:
-		// Move to the next file of the group, or past the group.
-		if m.taskIdx+1 < len(m.currentAsk().Group.Files) {
-			m.taskIdx++
-			m.resetCursorForStep()
-		} else {
-			m.nextGroup()
-		}
+		m.step = stepConfirm
+		m.cursor = 0
 	case stepConfirm:
 		// handled by confirm()
 	}
 }
 
-// nextGroup advances to the next group, or to confirm after the last one.
+// nextGroup advances to the next group, or to the queue-item-wide questions
+// after the last one.
 func (m *model) nextGroup() {
 	if m.groupIdx+1 < len(m.asks) {
 		m.enterGroup(m.groupIdx + 1)
-	} else {
-		m.step = stepConfirm
-		m.cursor = 0
+		return
 	}
+	m.afterGroups()
 }
 
-// afterSubs/afterNormalize/afterAttach advance to the next applicable step,
-// honoring config-answered questions.
-func (m *model) afterSubs() {
-	if m.ask(m.groupIdx).AskNormalize {
+// afterGroups/afterNormalize/afterAttach advance to the next applicable
+// queue-item-wide question, honoring config-answered ones. Normalize,
+// attachments and the video preset are one choice for the whole queue item:
+// they are asked once, after the last group, right before the confirm screen.
+func (m *model) afterGroups() {
+	if m.currentAsk().AskNormalize {
 		m.step = stepNormalize
 	} else {
 		m.afterNormalize()
@@ -174,7 +169,7 @@ func (m *model) afterSubs() {
 }
 
 func (m *model) afterNormalize() {
-	if m.ask(m.groupIdx).AskAttachments {
+	if m.currentAsk().AskAttachments {
 		m.step = stepAttach
 	} else {
 		m.afterAttach()
@@ -184,11 +179,11 @@ func (m *model) afterNormalize() {
 }
 
 func (m *model) afterAttach() {
-	if m.ask(m.groupIdx).AskPreset {
-		m.taskIdx = 0
+	if m.currentAsk().AskPreset {
 		m.step = stepPreset
 	} else {
-		m.nextGroup()
+		m.step = stepConfirm
+		m.cursor = 0
 		return
 	}
 	m.resetCursorForStep()
@@ -201,12 +196,9 @@ func (m *model) resetCursorForStep() {
 	a := m.currentAsk()
 	switch m.step {
 	case stepPreset:
-		// Preselect the default preset for this task ("copy" unless the
-		// config sets default_preset).
-		def := ""
-		if m.taskIdx < len(a.Defaults.Presets) {
-			def = a.Defaults.Presets[m.taskIdx]
-		}
+		// Preselect the default preset ("copy" unless the config sets
+		// default_preset).
+		def := a.Defaults.Preset
 		for i, name := range a.PresetChoices {
 			if name == def {
 				m.cursor = i
@@ -223,25 +215,37 @@ func (m *model) resetCursorForStep() {
 // commitStep stores the current step's answer and advances.
 func (m *model) commitStep() tea.Cmd {
 	a := m.currentAsk()
-	ans := m.reply[m.groupIdx]
 	switch m.step {
 	case stepAudio:
+		ans := m.reply[m.groupIdx]
 		ans.Audio = sortedIndexes(m.checked, a.Group.Audio)
+		m.reply[m.groupIdx] = ans
 	case stepSubs:
+		ans := m.reply[m.groupIdx]
 		ans.Subs = sortedIndexes(m.checked, a.Group.Subtitles)
-	case stepNormalize:
-		ans.Normalize = m.cursor == 0
-	case stepAttach:
-		ans.Attachments = m.cursor == 0
-	case stepPreset:
-		if m.taskIdx < len(ans.Presets) && m.cursor < len(a.PresetChoices) {
-			ans.Presets[m.taskIdx] = a.PresetChoices[m.cursor]
+		m.reply[m.groupIdx] = ans
+	case stepNormalize, stepAttach, stepPreset:
+		// Queue-item-wide choices: replicate into every group's answer.
+		switch m.step {
+		case stepNormalize:
+			for i := range m.reply {
+				m.reply[i].Normalize = m.cursor == 0
+			}
+		case stepAttach:
+			for i := range m.reply {
+				m.reply[i].Attachments = m.cursor == 0
+			}
+		case stepPreset:
+			if m.cursor < len(a.PresetChoices) {
+				for i := range m.reply {
+					m.reply[i].Preset = a.PresetChoices[m.cursor]
+				}
+			}
 		}
 	case stepConfirm:
 		return m.confirm()
 	}
 	if m.step != stepConfirm {
-		m.reply[m.groupIdx] = ans
 		m.nextStep()
 	}
 	return nil
@@ -305,7 +309,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.reply = make([]plan.Answers, len(msg.asks))
 		for i, a := range msg.asks {
 			m.reply[i] = plan.Answers{
-				Presets:     append([]string(nil), a.Defaults.Presets...),
+				Preset:      a.Defaults.Preset,
 				Normalize:   a.Defaults.Normalize,
 				Attachments: a.Defaults.Attachments,
 			}

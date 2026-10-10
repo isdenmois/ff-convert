@@ -50,7 +50,7 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 	makeFixture(t, dir, "b.mkv")
 
 	// A custom preset backed by ffmpeg's built-in mpeg4 encoder (always
-	// available) to exercise a per-task codec different from copy.
+	// available) to exercise a codec different from copy.
 	cfg := &config.Config{
 		Presets: map[string]config.Preset{
 			"mpeg4": {Codec: "mpeg4", Args: []string{"-q:v", "5"}},
@@ -72,9 +72,9 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 		if !in.AskPreset || !in.AskNormalize || !in.AskAttachments {
 			t.Error("all questions must be asked with unset config")
 		}
-		// Defaults must preselect copy and normalization-on per task.
-		if len(in.Defaults.Presets) != 2 || in.Defaults.Presets[0] != "copy" || in.Defaults.Presets[1] != "copy" {
-			t.Errorf("preset defaults = %v, want [copy copy]", in.Defaults.Presets)
+		// Defaults must preselect copy and normalization-on.
+		if in.Defaults.Preset != "copy" {
+			t.Errorf("preset default = %q, want copy", in.Defaults.Preset)
 		}
 		if !in.Defaults.Normalize {
 			t.Error("normalization default must be on")
@@ -82,7 +82,7 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 		return plan.Answers{
 			Audio:       in.AudioDefaults,
 			Subs:        in.SubsDefaults,
-			Presets:     []string{"copy", "mpeg4"}, // per-task codecs
+			Preset:      "mpeg4", // one codec for the whole queue item
 			Normalize:   false,
 			Attachments: false,
 		}, nil
@@ -130,11 +130,11 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 	if len(m.Subtitles) != 1 || m.Subtitles[0].Language != "eng" {
 		t.Fatalf("output subs = %+v", m.Subtitles)
 	}
-	if m.Video[0].Codec != "h264" {
-		t.Fatalf("a.mkv video should be copied h264, got %s", m.Video[0].Codec)
+	// Every file of the queue item shares the one chosen codec: mpeg4.
+	if m.Video[0].Codec != "mpeg4" {
+		t.Fatalf("a.mkv video should be re-encoded mpeg4, got %s", m.Video[0].Codec)
 	}
 
-	// The second task was given its own codec: mpeg4 instead of copy.
 	m, err = probe.File(context.Background(), filepath.Join(outDir, "b.mkv"))
 	if err != nil {
 		t.Fatal(err)

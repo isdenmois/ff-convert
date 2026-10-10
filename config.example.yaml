@@ -2,14 +2,14 @@
 # or mount into Docker and point FF_CONVERT_CONFIG at it).
 #
 # Defaults without this file:
-#   - the video codec is asked per file and preselected with "copy";
-#   - loudness normalization is asked once per group and preselected "on";
-#   - attachments are asked and preselected "copy";
+#   - the video codec is asked once per queue item and preselected with "copy";
+#   - loudness normalization is asked once per queue item and preselected "on";
+#   - attachments are asked once per queue item and preselected "copy";
 #   - outputs land in ./converted (override with FF_CONVERT_OUTPUT_DIR).
 #
 # When this file exists:
-#   - default_preset, when set, is used for every file and the per-file codec
-#     question is skipped entirely;
+#   - default_preset, when set, is used for every file and the codec question
+#     is skipped entirely;
 #   - audio.normalize, when set, skips the loudnorm question;
 #   - attachments, when set ("copy" or "omit"), skips the attachment question.
 # Audio/subtitle track selection is always asked — it depends on file content.

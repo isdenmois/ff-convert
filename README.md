@@ -3,8 +3,8 @@
 Batch movie transcoder wrapping ffmpeg/ffprobe. Converts a single movie file
 or a folder of movie files (alphabetically) to MKV with:
 
-- **video**: `copy` by default (remux), or per file AV1 (SVT-AV1 8-bit),
-  HEVC (libx265 / NVENC / VAAPI), or any custom preset
+- **video**: `copy` by default (remux), or AV1 (SVT-AV1 8-bit), HEVC
+  (libx265 / NVENC / VAAPI), or any custom preset — one choice per queue item
 - **audio**: every selected track → Opus 128k stereo, with a proper center-
   channel downmix (`pan=stereo|c0=c2+0.30*c0+0.30*c4|c1=c2+0.30*c1+0.30*c5`
   for 5.1) and loudness normalization on by default
@@ -18,8 +18,8 @@ or a folder of movie files (alphabetically) to MKV with:
 Before converting, all files are probed with ffprobe and grouped by identical
 audio+subtitle track layouts (language, title, codec, order, counts). Per
 group you pick the tracks to keep (English is pre-selected; no English →
-first audio track), loudnorm (on by default) and attachment handling; per
-file you pick the video codec (`copy` by default).
+first audio track); loudnorm (on by default), attachment handling and the
+video codec (`copy` by default) are picked once per queue item.
 
 Three frontends share one core:
 
@@ -82,12 +82,12 @@ default `converted/` in the working directory), so mount it read-write.
 
 ## Configuration
 
-See [`config.example.yaml`](config.example.yaml). Without a config, every
-file's video codec is asked per task with `copy` preselected, loudnorm is
-asked per group and preselected on, and attachments are preselected copy.
-When a config exists, its `default_preset` is used for all files without
-asking, and optional `audio.normalize` / `attachments` values pre-answer
-those questions. Track selection is always interactive. Built-in presets:
+See [`config.example.yaml`](config.example.yaml). Without a config, the
+video codec, loudnorm and attachment questions are asked once per queue item
+(`copy` / on / copy preselected). When a config exists, its `default_preset`
+is used for all files without asking, and optional `audio.normalize` /
+`attachments` values pre-answer those questions. Track selection is always
+interactive. Built-in presets:
 `copy`, `av1` (SVT-AV1 p6 CRF 28 8-bit), `hevc` (libx265 CRF 23 8-bit),
 `hevc-nvenc`, `hevc-vaapi`; custom presets are raw ffmpeg encoder args, so
 hardware encoders can be configured freely.

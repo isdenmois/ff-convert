@@ -30,11 +30,13 @@ type AskInput struct {
 	PresetChoices []string
 	// AskPreset/AskNormalize/AskAttachments are false when the config
 	// pre-answers the question (the answer is then taken from Defaults).
-	// AskPreset refers to the per-task (per-file) video codec question.
+	// Each refers to a queue-item-wide question (asked once per queue item,
+	// not per group): the video codec, loudness normalization and attachment
+	// handling.
 	AskPreset      bool
 	AskNormalize   bool
 	AskAttachments bool
-	// Defaults holds config-provided answers (per-file Presets, Normalize,
+	// Defaults holds config-provided answers (Preset, Normalize,
 	// Attachments) for the fields that are not asked.
 	Defaults plan.Answers
 }
@@ -244,11 +246,6 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 	}
 	inputs := make([]AskInput, 0, len(p.Groups))
 	for _, g := range p.Groups {
-		defPreset := cfg.DefaultPresetName()
-		presets := make([]string, len(g.Files))
-		for i := range presets {
-			presets[i] = defPreset
-		}
 		input := AskInput{
 			Group:          g,
 			AudioDefaults:  group.DefaultAudio(g),
@@ -259,7 +256,7 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 			AskAttachments: cfg.Attachments == nil,
 		}
 		input.Defaults = plan.Answers{
-			Presets:     presets,
+			Preset:      cfg.DefaultPresetName(),
 			Normalize:   cfg.NormalizeDefault(),
 			Attachments: cfg.Attachments == nil || *cfg.Attachments == "copy",
 		}
@@ -269,9 +266,9 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 }
 
 // BuildSession assembles the runnable session from per-group answers. The
-// answers slice is index-aligned with the AskInputs result; each answer's
-// Presets entry is the per-task video codec (missing or empty entries fall
-// back to the configured default preset).
+// answers slice is index-aligned with the AskInputs result. Preset, Normalize
+// and Attachments are queue-item-wide choices expected to be identical across
+// groups; an empty Preset falls back to the configured default preset.
 func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers) (*Session, error) {
 	if cfg == nil {
 		cfg = &config.Config{}
@@ -284,11 +281,11 @@ func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers) (*Sessio
 	defPreset := cfg.DefaultPresetName()
 	for gi, g := range p.Groups {
 		ans := answers[gi]
-		for fi, m := range g.Files {
-			name := defPreset
-			if fi < len(ans.Presets) && ans.Presets[fi] != "" {
-				name = ans.Presets[fi]
-			}
+		name := defPreset
+		if ans.Preset != "" {
+			name = ans.Preset
+		}
+		for _, m := range g.Files {
 			out := scan.OutputPath(m.Path)
 			task, err := plan.Build(m, name, ans, presets, cfg.Bitrate(), out)
 			if err != nil {
@@ -331,7 +328,7 @@ func resolveAnswers(in AskInput, ask AskFunc) (plan.Answers, error) {
 	ans := plan.Answers{
 		Audio:       append([]int(nil), in.AudioDefaults...),
 		Subs:        append([]int(nil), in.SubsDefaults...),
-		Presets:     append([]string(nil), in.Defaults.Presets...),
+		Preset:      in.Defaults.Preset,
 		Normalize:   in.Defaults.Normalize,
 		Attachments: in.Defaults.Attachments,
 	}
@@ -351,16 +348,8 @@ func resolveAnswers(in AskInput, ask AskFunc) (plan.Answers, error) {
 	if user.Subs != nil {
 		ans.Subs = user.Subs
 	}
-	if in.AskPreset {
-		for i, name := range user.Presets {
-			if i >= len(ans.Presets) {
-				ans.Presets = append(ans.Presets, name)
-				continue
-			}
-			if name != "" {
-				ans.Presets[i] = name
-			}
-		}
+	if in.AskPreset && user.Preset != "" {
+		ans.Preset = user.Preset
 	}
 	if in.AskNormalize {
 		ans.Normalize = user.Normalize

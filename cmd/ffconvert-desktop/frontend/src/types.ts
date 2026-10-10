@@ -27,7 +27,7 @@ export interface GroupView {
 export interface Answers {
   audio: number[]
   subs: number[]
-  presets: string[]
+  preset: string
   normalize: boolean
   attachments: boolean
 }

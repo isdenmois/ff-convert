@@ -76,7 +76,11 @@ func (m model) viewAsk() string {
 	var b strings.Builder
 	a := m.currentAsk()
 	b.WriteString(titleStyle.Render("ff-convert — conversion setup"))
-	b.WriteString(fmt.Sprintf("\n%s %s\n\n", groupStyle.Render("group"), groupStyle.Render(fmt.Sprintf("%d/%d", m.groupIdx+1, len(m.asks)))))
+	if m.step == stepAudio || m.step == stepSubs {
+		// The group counter applies to the per-group questions only.
+		b.WriteString(fmt.Sprintf("\n%s %s", groupStyle.Render("group"), groupStyle.Render(fmt.Sprintf("%d/%d", m.groupIdx+1, len(m.asks)))))
+	}
+	b.WriteString("\n\n")
 
 	switch m.step {
 	case stepAudio, stepSubs:
@@ -119,13 +123,11 @@ func (m model) viewAsk() string {
 		var title string
 		switch m.step {
 		case stepPreset:
-			files := a.Group.Files
-			name := filepath.Base(files[m.taskIdx].Path)
-			title = fmt.Sprintf("Video output preset — %s (file %d/%d)", name, m.taskIdx+1, len(files))
+			title = "Video output preset (applies to all files)"
 		case stepNormalize:
-			title = "Normalize audio loudness?"
+			title = "Normalize audio loudness (applies to all files)?"
 		case stepAttach:
-			title = "Keep embedded attachments (fonts, posters)?"
+			title = "Keep embedded attachments — fonts, posters (applies to all files)?"
 		}
 		b.WriteString(title + "\n\n")
 		for i, opt := range m.options() {
@@ -147,6 +149,11 @@ func (m model) viewAsk() string {
 func (m model) viewConfirm() string {
 	var b strings.Builder
 	b.WriteString("Ready to convert:\n\n")
+	// The preset, normalization and attachments are one set of choices for
+	// the whole queue item.
+	b.WriteString(fmt.Sprintf("  preset:      %s\n", m.reply[0].Preset))
+	b.WriteString(fmt.Sprintf("  normalize:   %s\n", yesNo(m.reply[0].Normalize)))
+	b.WriteString(fmt.Sprintf("  attachments: %s\n\n", yesNo(m.reply[0].Attachments)))
 	for gi, a := range m.asks {
 		ans := m.reply[gi]
 		b.WriteString(fmt.Sprintf("%s  %s\n", groupStyle.Render(fmt.Sprintf("group %d/%d:", gi+1, len(m.asks))), dimStyle.Render(fmt.Sprintf("%d file(s)", len(a.Group.Files)))))
@@ -155,15 +162,6 @@ func (m model) viewConfirm() string {
 			b.WriteString("  subtitles:   (none)\n")
 		} else {
 			b.WriteString("  subtitles:   " + joinLabels(a.Group.Subtitles, ans.Subs) + "\n")
-		}
-		b.WriteString(fmt.Sprintf("  normalize:   %s\n", yesNo(ans.Normalize)))
-		b.WriteString(fmt.Sprintf("  attachments: %s\n", yesNo(ans.Attachments)))
-		for fi, f := range a.Group.Files {
-			preset := ""
-			if fi < len(ans.Presets) {
-				preset = ans.Presets[fi]
-			}
-			b.WriteString(fmt.Sprintf("  %-12s%s → %s\n", "file:", filepath.Base(f.Path), preset))
 		}
 		if gi < len(m.asks)-1 {
 			b.WriteString("\n")

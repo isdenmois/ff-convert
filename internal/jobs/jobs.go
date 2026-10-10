@@ -90,8 +90,8 @@ type QuestionsView struct {
 	AskPreset      bool        `json:"ask_preset"`
 	AskNormalize   bool        `json:"ask_normalize"`
 	AskAttachments bool        `json:"ask_attachments"`
-	// DefaultPreset is the preselected per-task video codec (config
-	// default_preset, "copy" when unset).
+	// DefaultPreset is the preselected video codec for the whole queue item
+	// (config default_preset, "copy" when unset).
 	DefaultPreset string       `json:"default_preset"`
 	Defaults      plan.Answers `json:"defaults"`
 }

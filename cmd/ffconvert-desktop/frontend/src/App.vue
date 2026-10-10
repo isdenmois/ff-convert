@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   AddJob,
   CancelJob,
@@ -7,7 +7,6 @@ import {
   PickFolder,
   RemoveJob,
   Snapshot,
-  SubmitAnswers,
 } from '../wailsjs/go/main/App'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 import type { JobView } from './types'
@@ -17,6 +16,13 @@ import AnswersModal from './AnswersModal.vue'
 const store = reactive({ jobs: [] as JobView[] })
 const error = ref('')
 const answeringJobId = ref<string | null>(null)
+// Jobs whose questions dialog the user explicitly closed; they are not
+// auto-reopened until the job leaves the questions state.
+const dismissed = new Set<string>()
+
+const answeringJob = computed(
+  () => store.jobs.find((j) => j.id === answeringJobId.value) ?? null,
+)
 
 onMounted(async () => {
   try {
@@ -29,24 +35,43 @@ onMounted(async () => {
   })
 })
 
+// Auto-open the questions dialog for a job waiting on answers (app start,
+// or a dialog closed earlier). One dialog at a time: further pending jobs
+// open via their "Answer questions" button, or here once the current one is
+// answered.
+watch(
+  () => store.jobs,
+  (jobs) => {
+    for (const j of jobs) {
+      if (j.state !== 'questions') dismissed.delete(j.id)
+    }
+    if (answeringJob.value?.state !== 'questions') {
+      const next = jobs.find((j) => j.state === 'questions' && !dismissed.has(j.id))
+      if (next) answeringJobId.value = next.id
+    }
+  },
+  { immediate: true },
+)
+
 async function add(kind: 'file' | 'folder') {
   error.value = ''
   try {
     const path = kind === 'file' ? await PickFile() : await PickFolder()
     if (!path) return
-    const job = await AddJob(path)
-    if (job?.id) answeringJobId.value = job.id
+    await AddJob(path)
   } catch (e) {
     error.value = String(e)
   }
 }
 
 function openAnswers(id: string) {
+  dismissed.delete(id)
   answeringJobId.value = id
 }
 
-async function submit(id: string, answers: unknown) {
-  await SubmitAnswers(id, answers as never)
+function closeAnswers() {
+  if (answeringJobId.value) dismissed.add(answeringJobId.value)
+  answeringJobId.value = null
 }
 
 async function cancel(id: string) {
@@ -93,10 +118,9 @@ async function remove(id: string) {
   />
 
   <AnswersModal
-    v-if="store.jobs.find((j) => j.id === answeringJobId)?.state === 'questions'"
-    :job="store.jobs.find((j) => j.id === answeringJobId)!"
-    @close="answeringJobId = null"
-    @submit="submit"
+    v-if="answeringJob?.questions && answeringJob.state === 'questions'"
+    :job="answeringJob"
+    @close="closeAnswers"
   />
 </template>
 

@@ -93,4 +93,17 @@ func TestDefaults(t *testing.T) {
 	if got := DefaultSubs(g2); len(got) != 0 {
 		t.Fatalf("DefaultSubs(no eng) = %v", got)
 	}
+
+	// Empty results must be non-nil slices: the web/desktop frontends spread
+	// them, and encoding/json must emit [] rather than null.
+	g3 := &Group{}
+	if got := DefaultAudio(g3); got == nil {
+		t.Fatal("DefaultAudio(no tracks) = nil, want empty slice")
+	}
+	if got := DefaultSubs(g3); got == nil {
+		t.Fatal("DefaultSubs(no tracks) = nil, want empty slice")
+	}
+	if got := DefaultSubs(g2); got == nil {
+		t.Fatal("DefaultSubs(no eng subs) = nil, want empty slice")
+	}
 }
