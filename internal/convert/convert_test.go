@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/isden/ff-convert/internal/config"
 	"github.com/isden/ff-convert/internal/plan"
@@ -37,6 +38,39 @@ func makeFixture(t *testing.T, dir, name string) string {
 		t.Fatalf("fixture %s: %v\n%s", name, err, b)
 	}
 	return out
+}
+
+func TestSnapshotElapsedAndETA(t *testing.T) {
+	// Not started: everything zero.
+	sn := Snapshot{Overall: 0.5}
+	if sn.Elapsed() != 0 || sn.ETA() != 0 {
+		t.Fatalf("before start: elapsed=%v eta=%v, want 0/0", sn.Elapsed(), sn.ETA())
+	}
+
+	// Running at 50% for 2m: ETA must mirror elapsed.
+	sn = Snapshot{Started: time.Now().Add(-2 * time.Minute), Overall: 0.5}
+	if el := sn.Elapsed(); el < 2*time.Minute {
+		t.Fatalf("running elapsed = %v, want >= 2m", el)
+	}
+	if eta := sn.ETA(); eta < 2*time.Minute || eta > 2*time.Minute+time.Second {
+		t.Fatalf("running eta = %v, want ~2m", eta)
+	}
+
+	// Below 1% done the estimate is omitted.
+	sn = Snapshot{Started: time.Now().Add(-time.Second), Overall: 0.005}
+	if sn.ETA() != 0 {
+		t.Fatalf("eta below 1%% = %v, want 0", sn.ETA())
+	}
+
+	// Finished: elapsed is pinned to finished-started, no ETA.
+	started := time.Now().Add(-time.Hour)
+	sn = Snapshot{Started: started, Finished: started.Add(10 * time.Minute), Overall: 1}
+	if el := sn.Elapsed(); el != 10*time.Minute {
+		t.Fatalf("finished elapsed = %v, want 10m", el)
+	}
+	if sn.ETA() != 0 {
+		t.Fatalf("finished eta = %v, want 0", sn.ETA())
+	}
 }
 
 func TestPrepareAndRunEndToEnd(t *testing.T) {
@@ -117,6 +151,16 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 	}
 	if got := sess.Snapshot().Overall; got != 1 {
 		t.Fatalf("overall = %v", got)
+	}
+	sn := sess.Snapshot()
+	if sn.Started.IsZero() || sn.Finished.IsZero() {
+		t.Fatalf("started/finished not recorded: %+v", sn)
+	}
+	if el := sn.Elapsed(); el <= 0 || el != sn.Finished.Sub(sn.Started) {
+		t.Fatalf("elapsed = %v, want finished-started", el)
+	}
+	if sn.ETA() != 0 {
+		t.Fatalf("eta after finish = %v, want 0", sn.ETA())
 	}
 
 	// Output must contain the selected eng audio as opus stereo and the sub.

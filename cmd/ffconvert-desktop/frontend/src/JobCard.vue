@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatDuration } from './format'
 import type { JobView } from './types'
 
 const props = defineProps<{ job: JobView }>()
@@ -10,6 +11,17 @@ const emit = defineEmits<{
 }>()
 
 const overallPct = computed(() => Math.round(props.job.overall * 100))
+const timeLabel = computed(() => {
+  const elapsed = props.job.elapsed_ms
+  if (!elapsed) return ''
+  if (props.job.state === 'running') {
+    const eta = props.job.eta_ms
+    return eta
+      ? `${formatDuration(elapsed)} elapsed · eta ${formatDuration(eta)}`
+      : `${formatDuration(elapsed)} elapsed`
+  }
+  return `took ${formatDuration(elapsed)}`
+})
 
 const stateLabel: Record<string, string> = {
   probing: 'probing',
@@ -50,6 +62,7 @@ const stateLabel: Record<string, string> = {
     <div v-if="job.total > 0" class="overall">
       <div class="bar"><div :style="{ width: overallPct + '%' }" /></div>
       <span class="muted pct">{{ overallPct }}%</span>
+      <span v-if="timeLabel" class="muted small time">{{ timeLabel }}</span>
     </div>
 
     <div v-if="job.skipped?.length" class="muted small">
@@ -131,6 +144,12 @@ const stateLabel: Record<string, string> = {
   min-width: 90px;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+.time {
+  min-width: 140px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .small {
   font-size: 12px;

@@ -109,8 +109,10 @@ type Session struct {
 	Tasks   []*plan.Task
 	Skipped []scan.Skipped
 
-	mu    sync.Mutex
-	files []*FileTask
+	mu       sync.Mutex
+	files    []*FileTask
+	started  time.Time // when the first file started converting
+	finished time.Time // when every task reached a terminal state
 }
 
 // Snapshot returns a point-in-time copy of the file task states plus overall
@@ -121,6 +123,35 @@ type Snapshot struct {
 	Done    int
 	Failed  int
 	Total   int
+	// Started is the wall-clock time the first file started converting; zero
+	// until then (the shared pool may hold tasks back after Run is called).
+	Started time.Time
+	// Finished is the wall-clock time every task reached a terminal state;
+	// zero until the run completes.
+	Finished time.Time
+}
+
+// Elapsed returns the wall time since the first file started converting, or
+// the total run duration once finished. Zero before the run starts.
+func (sn Snapshot) Elapsed() time.Duration {
+	if sn.Started.IsZero() {
+		return 0
+	}
+	if !sn.Finished.IsZero() {
+		return sn.Finished.Sub(sn.Started)
+	}
+	return time.Since(sn.Started)
+}
+
+// ETA estimates the remaining time from overall progress as
+// elapsed·(1−p)/p. It returns 0 when no sensible estimate exists: before the
+// run starts, below 1% done (the estimate is wildly unstable there), or once
+// the run has finished.
+func (sn Snapshot) ETA() time.Duration {
+	if sn.Started.IsZero() || !sn.Finished.IsZero() || sn.Overall < 0.01 || sn.Overall >= 1 {
+		return 0
+	}
+	return time.Duration(float64(sn.Elapsed()) * (1 - sn.Overall) / sn.Overall)
 }
 
 // Files returns a copy of the current file task states.
@@ -160,7 +191,7 @@ func (s *Session) overall() float64 {
 func (s *Session) Snapshot() Snapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	sn := Snapshot{Overall: s.overall()}
+	sn := Snapshot{Overall: s.overall(), Started: s.started, Finished: s.finished}
 	for _, f := range s.files {
 		sn.Files = append(sn.Files, *f)
 		switch f.State {
@@ -385,6 +416,7 @@ func (s *Session) Run(ctx context.Context, p *pool.Pool, r Reporter) error {
 				s.update(t, func(f *FileTask) { f.State = StateCanceled })
 				return
 			}
+			s.markStarted()
 			s.update(t, func(f *FileTask) { f.State = StateRunning })
 			if r != nil {
 				r.TaskStart(t)
@@ -422,6 +454,9 @@ func (s *Session) Run(ctx context.Context, p *pool.Pool, r Reporter) error {
 		})
 	}
 	wg.Wait()
+	s.mu.Lock()
+	s.finished = time.Now()
+	s.mu.Unlock()
 
 	for _, f := range s.Files() {
 		if f.State == StateFailed {
@@ -429,6 +464,15 @@ func (s *Session) Run(ctx context.Context, p *pool.Pool, r Reporter) error {
 		}
 	}
 	return nil
+}
+
+// markStarted records the wall-clock time of the first actual task start.
+func (s *Session) markStarted() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.started.IsZero() {
+		s.started = time.Now()
+	}
 }
 
 // update mutates the FileTask belonging to a plan.Task under the session lock.

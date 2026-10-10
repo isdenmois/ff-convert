@@ -131,7 +131,13 @@ type JobView struct {
 	Done      int            `json:"done"`
 	Failed    int            `json:"failed"`
 	Total     int            `json:"total"`
-	Error     string         `json:"error,omitempty"`
+	// ElapsedMs is the conversion wall time so far — the total run duration
+	// once the job finishes; omitted until the first file starts converting.
+	ElapsedMs int64 `json:"elapsed_ms,omitempty"`
+	// EtaMs is the estimated remaining conversion time; omitted when no
+	// sensible estimate exists (see convert.Snapshot.ETA).
+	EtaMs int64  `json:"eta_ms,omitempty"`
+	Error string `json:"error,omitempty"`
 }
 
 type job struct {
@@ -480,6 +486,8 @@ func (m *Manager) view(j *job) JobView {
 		sn := j.sess.Snapshot()
 		v.Overall = sn.Overall
 		v.Done, v.Failed, v.Total = sn.Done, sn.Failed, sn.Total
+		v.ElapsedMs = sn.Elapsed().Milliseconds()
+		v.EtaMs = sn.ETA().Milliseconds()
 		for _, f := range sn.Files {
 			v.Files = append(v.Files, FileView{
 				Path: f.Path, Name: filepath.Base(f.Path), Output: f.Output,

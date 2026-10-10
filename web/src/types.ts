@@ -71,6 +71,10 @@ export interface JobView {
   done: number;
   failed: number;
   total: number;
+  /** Conversion wall time so far in ms (total run duration once finished). */
+  elapsed_ms?: number;
+  /** Estimated remaining conversion time in ms (running jobs only). */
+  eta_ms?: number;
   error?: string;
 }
 

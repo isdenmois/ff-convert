@@ -103,6 +103,12 @@ func TestJobLifecycle(t *testing.T) {
 	if done.Total != 2 || done.Done != 2 || done.Overall != 1 {
 		t.Fatalf("done view = %+v", done)
 	}
+	if done.ElapsedMs <= 0 {
+		t.Fatalf("done view elapsed_ms = %d, want > 0", done.ElapsedMs)
+	}
+	if done.EtaMs != 0 {
+		t.Fatalf("done view eta_ms = %d, want 0", done.EtaMs)
+	}
 	for _, f := range done.Files {
 		if _, err := os.Stat(f.Output); err != nil {
 			t.Fatalf("output missing: %v", err)

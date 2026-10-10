@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/lipgloss"
@@ -197,6 +198,22 @@ func yesNo(b bool) string {
 	return "no"
 }
 
+// formatDuration renders d as m:ss (or h:mm:ss once over an hour), e.g.
+// "1:05", "1:02:03". Sub-second parts are dropped.
+func formatDuration(d time.Duration) string {
+	if d < 0 {
+		d = 0
+	}
+	d = d.Round(time.Second)
+	h := int(d / time.Hour)
+	m := int(d % time.Hour / time.Minute)
+	s := int(d % time.Minute / time.Second)
+	if h > 0 {
+		return fmt.Sprintf("%d:%02d:%02d", h, m, s)
+	}
+	return fmt.Sprintf("%d:%02d", m, s)
+}
+
 func (m model) viewRunning() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("ff-convert — converting"))
@@ -206,6 +223,13 @@ func (m model) viewRunning() string {
 	b.WriteString(fmt.Sprintf("\noverall %s %3.0f%%   %d/%d done", bar, sn.Overall*100, sn.Done, sn.Total))
 	if sn.Failed > 0 {
 		b.WriteString(errStyle.Render(fmt.Sprintf("   %d failed", sn.Failed)))
+	}
+	if el := sn.Elapsed(); el > 0 {
+		if eta := sn.ETA(); eta > 0 {
+			b.WriteString(dimStyle.Render(fmt.Sprintf("   %s elapsed · eta %s", formatDuration(el), formatDuration(eta))))
+		} else {
+			b.WriteString(dimStyle.Render(fmt.Sprintf("   %s elapsed", formatDuration(el))))
+		}
 	}
 	b.WriteString("\n\n")
 
@@ -243,6 +267,9 @@ func (m model) viewDone() string {
 	}
 	sn := m.sess.Snapshot()
 	b.WriteString(fmt.Sprintf("\n%d/%d files converted", sn.Done, sn.Total))
+	if el := sn.Elapsed(); el > 0 {
+		b.WriteString(dimStyle.Render(fmt.Sprintf(" in %s", formatDuration(el))))
+	}
 	if sn.Failed > 0 {
 		b.WriteString(errStyle.Render(fmt.Sprintf(", %d failed:\n", sn.Failed)))
 		for _, f := range sn.Files {
