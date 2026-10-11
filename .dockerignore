@@ -1,0 +1,25 @@
+# VCS / tooling
+.git
+.zcode
+.playwright-mcp
+
+# Reinstalled inside the image (root workspace install)
+**/node_modules
+
+# Build outputs and local artifacts
+bin/
+converted/
+web/dist
+web/playwright-report
+web/test-results
+cmd/ffconvert-desktop/frontend/wailsjs
+
+# Not needed to build the image
+doc/
+packaging/
+web/e2e
+*.md
+Dockerfile
+docker-compose.example.yml
+.dockerignore
+config.example.yaml
