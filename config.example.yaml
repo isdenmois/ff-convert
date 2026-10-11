@@ -66,3 +66,10 @@ audio:
 
 # Optional attachments default: copy | omit (skips the question).
 attachments: copy
+
+# Optional category subfolders: the web answers modal then offers a select,
+# and the chosen category becomes the output subfolder:
+# «output_dir»/«category»/«stem».mkv. Entries are slugified ("TV Shows"
+# becomes "tv-shows"). A file already present in the category folder is
+# replaced — the scan-time skip only knows the flat path.
+#categories: ["Movies", "Series"]

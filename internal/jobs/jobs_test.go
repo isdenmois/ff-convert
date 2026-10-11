@@ -96,7 +96,7 @@ func TestJobLifecycle(t *testing.T) {
 		Audio:  q.Questions.Groups[0].AudioDefaults,
 		Preset: "copy",
 	}}
-	if err := m.SubmitAnswers(v.ID, answers); err != nil {
+	if err := m.SubmitAnswers(v.ID, "", answers); err != nil {
 		t.Fatal(err)
 	}
 	done := waitState(t, m, v.ID, StateDone)
@@ -129,7 +129,7 @@ func TestJobLifecycle(t *testing.T) {
 	}
 
 	// Submitting answers to a finished job must fail.
-	if err := m.SubmitAnswers(v2.ID, answers); err == nil {
+	if err := m.SubmitAnswers(v2.ID, "", answers); err == nil {
 		t.Fatal("submitting to done job must fail")
 	}
 

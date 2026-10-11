@@ -45,6 +45,7 @@ test.describe("conversion happy path", () => {
     // the SPA submitted a well-formed answers payload
     const answers = (await mock.requests()).find((r) => r.path === "/api/jobs/1/answers");
     expect(answers?.body).toEqual({
+      category: "",
       answers: [{ audio: [1], subs: [], preset: "copy", normalize: true, attachments: true }],
     });
   });

@@ -270,7 +270,7 @@ func (m *model) options() []string {
 }
 
 func (m *model) confirm() tea.Cmd {
-	sess, err := m.plan.BuildSession(m.cfg, m.reply, m.outDir)
+	sess, err := m.plan.BuildSession(m.cfg, "", m.reply, m.outDir)
 	if err != nil {
 		m.phase = phaseError
 		m.err = err

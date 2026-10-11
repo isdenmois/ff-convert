@@ -15,6 +15,14 @@ export class AnswersModalElement extends PageElement {
     return this.root.locator("section", { hasText: "Video preset" }).locator("select");
   }
 
+  get categorySelect(): Locator {
+    return this.section("Category").locator("select");
+  }
+
+  get outputLine(): Locator {
+    return this.root.locator("p.outdir");
+  }
+
   get normalizeCheckbox(): Locator {
     return this.section("Normalize loudness").locator("input[type=checkbox]");
   }

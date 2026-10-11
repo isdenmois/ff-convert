@@ -35,7 +35,7 @@ describe("jobs api", () => {
     });
   });
 
-  it("should POST the answers for the job id when submitting answers", async () => {
+  it("should POST the answers and category for the job id when submitting answers", async () => {
     // Arrange
     const job = { id: "j1", state: "running" };
     const answers: Answers[] = [
@@ -44,14 +44,14 @@ describe("jobs api", () => {
     fetchMock.mockResolvedValue(respondOk(job));
 
     // Act
-    const submitted = await submitAnswers("j1", answers);
+    const submitted = await submitAnswers("j1", answers, "series");
 
     // Assert
     expect(submitted).toEqual(job);
     expect(fetchMock).toHaveBeenCalledWith("/api/jobs/j1/answers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers }),
+      body: JSON.stringify({ category: "series", answers }),
     });
   });
 

@@ -66,7 +66,7 @@ func main() {
 		"config", map[string]any{"exists": cfg.Exists, "path": cfg.Path})
 
 	mgr := jobs.NewManager(cfg, p, outDir)
-	srv := &server{mgr: mgr, lib: abs, outDir: outDir, log: logger}
+	srv := &server{mgr: mgr, lib: abs, outDir: outDir, log: logger, categories: cfg.Categories}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
@@ -106,10 +106,32 @@ func envOr(key, def string) string {
 }
 
 type server struct {
-	mgr    *jobs.Manager
-	lib    string
-	outDir string
-	log    *log.Logger
+	mgr        *jobs.Manager
+	lib        string
+	outDir     string
+	log        *log.Logger
+	categories []string
+}
+
+// withCategories returns v with the configured category list attached to
+// its questions (the shared manager leaves the field nil; categories are a
+// web-only feature). Questions is copied — manager state is never mutated.
+func (s *server) withCategories(v jobs.JobView) jobs.JobView {
+	if v.Questions == nil || len(s.categories) == 0 {
+		return v
+	}
+	q := *v.Questions
+	q.Categories = s.categories
+	v.Questions = &q
+	return v
+}
+
+// withCategoriesAll maps withCategories over a snapshot.
+func (s *server) withCategoriesAll(vs []jobs.JobView) []jobs.JobView {
+	for i := range vs {
+		vs[i] = s.withCategories(vs[i])
+	}
+	return vs
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -197,11 +219,11 @@ func (s *server) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, err)
 		return
 	}
-	writeJSON(w, http.StatusAccepted, v)
+	writeJSON(w, http.StatusAccepted, s.withCategories(v))
 }
 
 func (s *server) handleJobs(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, s.mgr.Views())
+	writeJSON(w, http.StatusOK, s.withCategoriesAll(s.mgr.Views()))
 }
 
 func (s *server) handleJobGet(w http.ResponseWriter, r *http.Request) {
@@ -210,19 +232,20 @@ func (s *server) handleJobGet(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, v)
+	writeJSON(w, http.StatusOK, s.withCategories(v))
 }
 
 func (s *server) handleAnswers(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var body struct {
-		Answers []plan.Answers `json:"answers"`
+		Category string         `json:"category"`
+		Answers  []plan.Answers `json:"answers"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeErr(w, http.StatusBadRequest, err)
 		return
 	}
-	if err := s.mgr.SubmitAnswers(id, body.Answers); err != nil {
+	if err := s.mgr.SubmitAnswers(id, body.Category, body.Answers); err != nil {
 		writeErr(w, http.StatusBadRequest, err)
 		return
 	}
@@ -231,7 +254,7 @@ func (s *server) handleAnswers(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, v)
+	writeJSON(w, http.StatusOK, s.withCategories(v))
 }
 
 func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
@@ -245,7 +268,7 @@ func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, v)
+	writeJSON(w, http.StatusOK, s.withCategories(v))
 }
 
 func (s *server) handleRemove(w http.ResponseWriter, r *http.Request) {
@@ -286,7 +309,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	defer ticker.Stop()
 
 	send := func() bool {
-		data, err := json.Marshal(s.mgr.Views())
+		data, err := json.Marshal(s.withCategoriesAll(s.mgr.Views()))
 		if err != nil {
 			return false
 		}

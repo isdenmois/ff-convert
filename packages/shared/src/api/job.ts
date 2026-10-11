@@ -39,6 +39,8 @@ export interface QuestionsView {
   ask_normalize: boolean;
   ask_attachments: boolean;
   default_preset: string;
+  /** Selectable output subfolders (web frontend only; absent elsewhere). */
+  categories?: string[];
   defaults: Answers;
 }
 

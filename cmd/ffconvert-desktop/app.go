@@ -126,8 +126,10 @@ func (a *App) AddJob(path string) (jobs.JobView, error) {
 }
 
 // SubmitAnswers stores the user's per-group answers and enqueues the job.
+// Categories are a web-only feature, so the desktop always uses the output
+// root; the exported signature stays stable for the wails bindings.
 func (a *App) SubmitAnswers(id string, answers []plan.Answers) error {
-	return a.mgr.SubmitAnswers(id, answers)
+	return a.mgr.SubmitAnswers(id, "", answers)
 }
 
 // CancelJob cancels a pending or running job.

@@ -301,17 +301,25 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 // writing outputs to outDir. The answers slice is index-aligned with the
 // AskInputs result. Preset, Normalize and Attachments are queue-item-wide
 // choices expected to be identical across groups; an empty Preset falls back
-// to the configured default preset.
-func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers, outDir string) (*Session, error) {
+// to the configured default preset. Category, when set, is a configured
+// output subfolder: outputs land in outDir/category.
+func (p *Plan) BuildSession(cfg *config.Config, category string, answers []plan.Answers, outDir string) (*Session, error) {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
 	if len(answers) != len(p.Groups) {
 		return nil, fmt.Errorf("%d answers for %d groups", len(answers), len(p.Groups))
 	}
+	if category != "" && !cfg.HasCategory(category) {
+		return nil, fmt.Errorf("unknown category %q", category)
+	}
 	presets := plan.PresetsMap(cfg)
 	sess := &Session{Source: p.Source, Skipped: p.Skipped}
 	defPreset := cfg.DefaultPresetName()
+	outRoot := outDir
+	if category != "" {
+		outRoot = filepath.Join(outDir, category)
+	}
 	for gi, g := range p.Groups {
 		ans := answers[gi]
 		name := defPreset
@@ -319,7 +327,7 @@ func (p *Plan) BuildSession(cfg *config.Config, answers []plan.Answers, outDir s
 			name = ans.Preset
 		}
 		for _, m := range g.Files {
-			out := scan.OutputPathIn(outDir, m.Path)
+			out := scan.OutputPathIn(outRoot, m.Path)
 			task, err := plan.Build(m, name, ans, presets, cfg.Bitrate(), out)
 			if err != nil {
 				return nil, err
@@ -358,7 +366,7 @@ func Prepare(ctx context.Context, source string, cfg *config.Config, ask AskFunc
 		}
 		answers[i] = ans
 	}
-	return p.BuildSession(cfg, answers, outDir)
+	return p.BuildSession(cfg, "", answers, outDir)
 }
 
 // resolveAnswers merges config defaults with the interactive ask: only the

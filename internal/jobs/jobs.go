@@ -92,8 +92,12 @@ type QuestionsView struct {
 	AskAttachments bool        `json:"ask_attachments"`
 	// DefaultPreset is the preselected video codec for the whole queue item
 	// (config default_preset, "copy" when unset).
-	DefaultPreset string       `json:"default_preset"`
-	Defaults      plan.Answers `json:"defaults"`
+	DefaultPreset string `json:"default_preset"`
+	// Categories are the selectable output subfolders. They are a web-only
+	// feature: the web API injects them into the snapshots it sends; the
+	// shared manager leaves the field nil so the desktop never sees them.
+	Categories []string     `json:"categories,omitempty"`
+	Defaults   plan.Answers `json:"defaults"`
 }
 
 // FileView is a UI-friendly file progress record.
@@ -309,8 +313,10 @@ func (m *Manager) probeJob(j *job) {
 }
 
 // SubmitAnswers stores the per-group answers and enqueues the job for
-// conversion. answers is index-aligned with the questions' groups.
-func (m *Manager) SubmitAnswers(id string, answers []plan.Answers) error {
+// conversion. answers is index-aligned with the questions' groups. A
+// non-empty category picks a configured output subfolder; "" keeps the
+// output root.
+func (m *Manager) SubmitAnswers(id string, category string, answers []plan.Answers) error {
 	m.mu.Lock()
 	j := m.byID(id)
 	if j == nil {
@@ -325,7 +331,7 @@ func (m *Manager) SubmitAnswers(id string, answers []plan.Answers) error {
 		m.mu.Unlock()
 		return fmt.Errorf("%d answer groups for %d question groups", len(answers), len(j.questions.Groups))
 	}
-	sess, err := j.plan.BuildSession(m.cfg, answers, j.outDir)
+	sess, err := j.plan.BuildSession(m.cfg, category, answers, j.outDir)
 	if err != nil {
 		m.mu.Unlock()
 		return err

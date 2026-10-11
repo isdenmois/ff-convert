@@ -57,6 +57,7 @@ audio:
   normalize: false
 attachments: omit
 output_dir: /mnt/media/converted
+categories: ["TV Shows", "movies/2024", "TV Shows", "..."]
 `
 	if err := os.WriteFile(path, []byte(yml), 0o644); err != nil {
 		t.Fatal(err)
@@ -87,6 +88,12 @@ output_dir: /mnt/media/converted
 	if cfg.OutputDir != "/mnt/media/converted" {
 		t.Fatalf("OutputDir = %q", cfg.OutputDir)
 	}
+	if len(cfg.Categories) != 2 || cfg.Categories[0] != "tv-shows" || cfg.Categories[1] != "movies-2024" {
+		t.Fatalf("Categories = %v, want [tv-shows movies-2024]", cfg.Categories)
+	}
+	if !cfg.HasCategory("tv-shows") || cfg.HasCategory("TV Shows") || cfg.HasCategory("") {
+		t.Fatal("HasCategory must match only the cleaned names")
+	}
 	if got := cfg.DefaultPresetName(); got != "av1-fast" {
 		t.Fatalf("DefaultPresetName() = %q, want av1-fast", got)
 	}
@@ -97,6 +104,29 @@ output_dir: /mnt/media/converted
 	// copy, av1, hevc, hevc-nvenc, hevc-vaapi, av1-nvenc, av1-fast
 	if len(names) != 7 || names[6] != "av1-fast" {
 		t.Fatalf("PresetNames = %v", names)
+	}
+}
+
+func TestCategorySlugify(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"TV Shows", "tv-shows"},
+		{"Movies/2024", "movies-2024"},
+		{"..", ""},
+		{"  Action  ", "action"},
+		{"Sci--Fi", "sci-fi"},
+		{"4K HDR!", "4k-hdr"},
+		{"", ""},
+	}
+	for _, c := range cases {
+		if got := slugifyCategory(c.in); got != c.want {
+			t.Errorf("slugifyCategory(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+	if got := cleanCategories([]string{"", "..", "Series", "series", "Movies"}); len(got) != 2 || got[0] != "series" || got[1] != "movies" {
+		t.Errorf("cleanCategories = %v, want [series movies]", got)
+	}
+	if got := cleanCategories(nil); got != nil {
+		t.Errorf("cleanCategories(nil) = %v, want nil", got)
 	}
 }
 

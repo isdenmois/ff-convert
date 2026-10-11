@@ -70,8 +70,8 @@ export const useJobsStore = defineStore("jobs", () => {
     }
   }
 
-  function submit(id: string, answers: Answers[]) {
-    return submitAnswers(id, answers);
+  function submit(id: string, answers: Answers[], category: string) {
+    return submitAnswers(id, answers, category);
   }
 
   /**

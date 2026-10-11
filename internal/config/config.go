@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"unicode"
 
 	"gopkg.in/yaml.v3"
 )
@@ -63,6 +65,10 @@ type Config struct {
 	Audio         *Audio            `yaml:"audio,omitempty"`
 	// Attachments, when set ("copy" or "omit"), skips the attachment question.
 	Attachments *string `yaml:"attachments,omitempty"`
+	// Categories are the output-subfolder choices the web UI offers on the
+	// answers modal; entries are slugified at load. Absent/empty ⇒ the web UI
+	// offers no choice and outputs stay flat.
+	Categories []string `yaml:"categories,omitempty"`
 	// OutputDir, when set, is the default folder converted files are written
 	// to (an absolute path is recommended). FF_CONVERT_OUTPUT_DIR overrides
 	// it; frontends apply their own fallback when both are unset.
@@ -115,6 +121,7 @@ func LoadFrom(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
+	cfg.Categories = cleanCategories(cfg.Categories)
 	cfg.Path = path
 	cfg.Exists = true
 	if cfg.DefaultPreset != "" {
@@ -186,6 +193,56 @@ func (c *Config) DefaultPresetName() string {
 // config does not decide (on by default).
 func (c *Config) NormalizeDefault() bool {
 	return c.Audio == nil || c.Audio.Normalize == nil || *c.Audio.Normalize
+}
+
+// HasCategory reports whether name is one of the configured categories.
+func (c *Config) HasCategory(name string) bool {
+	for _, cat := range c.Categories {
+		if cat == name {
+			return true
+		}
+	}
+	return false
+}
+
+// slugifyCategory turns a configured category label into a folder name:
+// lowercased, unicode letters and digits kept, every other run of
+// characters collapses to one "-", leading/trailing "-" trimmed.
+// "TV Shows" → "tv-shows"; "Movies/2024" → "movies-2024"; ".." → "".
+func slugifyCategory(s string) string {
+	var b strings.Builder
+	sep := true // nothing written yet: no leading "-"
+	for _, r := range strings.ToLower(strings.TrimSpace(s)) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+			sep = false
+			continue
+		}
+		if !sep {
+			b.WriteByte('-')
+			sep = true
+		}
+	}
+	return strings.TrimSuffix(b.String(), "-")
+}
+
+// cleanCategories slugifies the labels, drops entries that collapse to ""
+// and de-duplicates keeping the first occurrence.
+func cleanCategories(in []string) []string {
+	if len(in) == 0 {
+		return nil
+	}
+	seen := make(map[string]bool, len(in))
+	out := make([]string, 0, len(in))
+	for _, c := range in {
+		c = slugifyCategory(c)
+		if c == "" || seen[c] {
+			continue
+		}
+		seen[c] = true
+		out = append(out, c)
+	}
+	return out
 }
 
 func sortStrings(s []string) {

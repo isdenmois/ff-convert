@@ -5,7 +5,7 @@ import type { Answers, JobView } from "../api/job";
 const props = defineProps<{
   job: JobView;
   /** Submits the answers for the job; the modal stays open until it resolves. */
-  submit: (id: string, answers: Answers[]) => Promise<unknown>;
+  submit: (id: string, answers: Answers[], category: string) => Promise<unknown>;
 }>();
 const emit = defineEmits<{ close: [] }>();
 
@@ -32,6 +32,12 @@ const drafts = reactive<Omit<Answers, "preset" | "normalize" | "attachments">[]>
 const preset = ref(q.default_preset);
 const normalize = ref(q.defaults.normalize);
 const attachments = ref(q.defaults.attachments);
+// Output subfolder for the whole queue item ("" = the output root). Only
+// offered when the backend sends a categories list (web frontend).
+const category = ref("");
+const outputDir = computed(() =>
+  category.value ? `${props.job.output_dir}/${category.value}` : props.job.output_dir,
+);
 const draft = computed(() => drafts[groupIdx.value]);
 
 const error = ref("");
@@ -73,6 +79,7 @@ async function onSubmit() {
         audio: [...d.audio],
         subs: [...d.subs],
       })),
+      category.value,
     );
     emit("close");
   } catch (e) {
@@ -90,9 +97,17 @@ async function onSubmit() {
         <strong>{{ job.name }}</strong>
         <button class="close" @click="emit('close')">×</button>
       </header>
-      <p v-if="job.output_dir" class="muted small outdir" :title="job.output_dir">
-        Output: {{ job.output_dir }}
+      <p v-if="job.output_dir" class="muted small outdir" :title="outputDir">
+        Output: {{ outputDir }}
       </p>
+
+      <section v-if="q.categories?.length" class="inline">
+        <h3>Category — output subfolder (all files)</h3>
+        <select v-model="category">
+          <option value="">— no category —</option>
+          <option v-for="c in q.categories" :key="c" :value="c">{{ c }}</option>
+        </select>
+      </section>
 
       <section v-if="q.ask_preset" class="inline">
         <h3>Video preset (all files)</h3>

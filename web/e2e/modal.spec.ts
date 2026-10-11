@@ -126,6 +126,29 @@ test.describe("answers modal", () => {
     await expect(modal.submitButton).toBeVisible();
   });
 
+  test("category select chooses the output subfolder", async ({ mainPage, mock }) => {
+    await mock.seedJob({ path: "Movies/movie.mkv", categories: ["movies", "series"] }, "questions");
+    await mainPage.open();
+    const modal = mainPage.modal;
+
+    await expect(modal.categorySelect).toBeVisible();
+    await expect(modal.categorySelect).toHaveValue("");
+    await expect(modal.outputLine).toContainText("Output:");
+    await expect(modal.outputLine).not.toContainText("/series");
+
+    await modal.categorySelect.selectOption("series");
+    await expect(modal.outputLine).toContainText("/series");
+
+    await modal.submit();
+    await expect(modal.root).toBeHidden();
+
+    const answers = (await mock.requests()).find((r) => r.path === "/api/jobs/1/answers");
+    expect(answers?.body).toEqual({
+      category: "series",
+      answers: [{ audio: [1], subs: [], preset: "copy", normalize: true, attachments: true }],
+    });
+  });
+
   test("backdrop click closes the modal; the card reopens it", async ({ mainPage, mock }) => {
     await mock.seedJob({ path: "Movies/m.mkv" }, "questions");
     await mainPage.open();

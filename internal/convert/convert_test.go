@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/isden/ff-convert/internal/config"
+	"github.com/isden/ff-convert/internal/group"
 	"github.com/isden/ff-convert/internal/plan"
 	"github.com/isden/ff-convert/internal/pool"
 	"github.com/isden/ff-convert/internal/probe"
@@ -70,6 +71,34 @@ func TestSnapshotElapsedAndETA(t *testing.T) {
 	}
 	if sn.ETA() != 0 {
 		t.Fatalf("finished eta = %v, want 0", sn.ETA())
+	}
+}
+
+func TestBuildSessionCategory(t *testing.T) {
+	cfg := &config.Config{Categories: []string{"series"}}
+	p := &Plan{Groups: []*group.Group{{
+		Files: []*probe.Media{{Path: "/in/movie.mkv", Audio: []probe.Stream{{Index: 1}}}},
+	}}}
+	answers := []plan.Answers{{Audio: []int{1}, Preset: "copy"}}
+
+	sess, err := p.BuildSession(cfg, "series", answers, "/out")
+	if err != nil {
+		t.Fatalf("BuildSession(series): %v", err)
+	}
+	if len(sess.Tasks) != 1 || sess.Tasks[0].Output != "/out/series/movie.mkv" {
+		t.Fatalf("category outputs = %+v", sess.Tasks)
+	}
+
+	sess, err = p.BuildSession(cfg, "", answers, "/out")
+	if err != nil {
+		t.Fatalf("BuildSession(flat): %v", err)
+	}
+	if len(sess.Tasks) != 1 || sess.Tasks[0].Output != "/out/movie.mkv" {
+		t.Fatalf("flat outputs = %+v", sess.Tasks)
+	}
+
+	if _, err := p.BuildSession(cfg, "movies", answers, "/out"); err == nil {
+		t.Fatal("unknown category must error")
 	}
 }
 

@@ -9,8 +9,8 @@ export function createJob(path: string): Promise<JobView> {
   return api<JobView>("POST", "/api/jobs", { path });
 }
 
-export function submitAnswers(id: string, answers: Answers[]): Promise<JobView> {
-  return api<JobView>("POST", `/api/jobs/${id}/answers`, { answers });
+export function submitAnswers(id: string, answers: Answers[], category: string): Promise<JobView> {
+  return api<JobView>("POST", `/api/jobs/${id}/answers`, { category, answers });
 }
 
 export function cancelJob(id: string): Promise<JobView> {

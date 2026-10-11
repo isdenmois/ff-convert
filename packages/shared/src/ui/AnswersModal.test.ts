@@ -165,6 +165,18 @@ describe("AnswersModal", () => {
       expect((screen.getByLabelText("enabled") as HTMLInputElement).checked).toBe(true);
       expect((screen.getByLabelText("copy") as HTMLInputElement).checked).toBe(true);
     });
+
+    it("should render no category select without a categories list", () => {
+      // Arrange
+      const job = questionsJob();
+
+      // Act
+      render(AnswersModal, { props: { job, submit: vi.fn() } });
+
+      // Assert
+      expect(screen.queryByDisplayValue("— no category —")).toBeNull();
+      expect(screen.queryByText(/Category/)).toBeNull();
+    });
   });
 
   describe("submitting", () => {
@@ -177,9 +189,11 @@ describe("AnswersModal", () => {
       await fireEvent.click(screen.getByRole("button", { name: "Start conversion" }));
 
       // Assert
-      expect(submit).toHaveBeenCalledWith("j1", [
-        { audio: [0], subs: [2], preset: "copy", normalize: true, attachments: true },
-      ]);
+      expect(submit).toHaveBeenCalledWith(
+        "j1",
+        [{ audio: [0], subs: [2], preset: "copy", normalize: true, attachments: true }],
+        "",
+      );
       expect(view.emitted("close")).toHaveLength(1);
     });
 
@@ -195,9 +209,40 @@ describe("AnswersModal", () => {
       await fireEvent.click(screen.getByRole("button", { name: "Start conversion" }));
 
       // Assert
-      expect(submit).toHaveBeenCalledWith("j1", [
-        { audio: [0, 1], subs: [3], preset: "copy", normalize: true, attachments: true },
-      ]);
+      expect(submit).toHaveBeenCalledWith(
+        "j1",
+        [{ audio: [0, 1], subs: [3], preset: "copy", normalize: true, attachments: true }],
+        "",
+      );
+    });
+
+    it("should submit the chosen output category and preview its folder", async () => {
+      // Arrange
+      const submit = vi.fn().mockResolvedValue(undefined);
+      const job = questionsJob({ questions: questions({ categories: ["movies", "series"] }) });
+      render(AnswersModal, { props: { job, submit } });
+
+      // Act / Assert — "no category" selected by default, flat output shown.
+      const select = screen.getByDisplayValue("— no category —") as HTMLSelectElement;
+      expect(select.value).toBe("");
+      expect(screen.getByText("Output: /out/movie")).toBeTruthy();
+      expect(screen.getByRole("option", { name: "series" })).toBeTruthy();
+
+      // Act
+      await fireEvent.update(select, "series");
+
+      // Assert
+      expect(screen.getByText("Output: /out/movie/series")).toBeTruthy();
+
+      // Act
+      await fireEvent.click(screen.getByRole("button", { name: "Start conversion" }));
+
+      // Assert
+      expect(submit).toHaveBeenCalledWith(
+        "j1",
+        [{ audio: [0], subs: [2], preset: "copy", normalize: true, attachments: true }],
+        "series",
+      );
     });
 
     it("should block submit and switch to a group that has no audio track selected", async () => {
@@ -287,7 +332,7 @@ describe("AnswersModal", () => {
       await fireEvent.click(screen.getByRole("button", { name: "Start conversion" }));
 
       // Assert
-      expect(submit).toHaveBeenCalledWith("j1", [expect.objectContaining({ subs: [] })]);
+      expect(submit).toHaveBeenCalledWith("j1", [expect.objectContaining({ subs: [] })], "");
     });
   });
 

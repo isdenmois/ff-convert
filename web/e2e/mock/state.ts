@@ -102,6 +102,8 @@ export interface JobTemplate {
   /** positions within the file list whose conversion fails at ~70%. */
   failFiles?: number[];
   skipped?: string[];
+  /** categories offered by the modal (already slugified). */
+  categories?: string[];
 }
 
 const DEFAULT_AUDIO: StreamSpec[] = [
@@ -150,19 +152,19 @@ function buildQuestions(t: JobTemplate): QuestionsView {
   });
   return {
     groups,
-    preset_choices:
-      t.presetChoices ?? [
-        "copy",
-        "av1",
-        "hevc",
-        "hevc-nvenc",
-        "hevc-vaapi",
-        "av1-nvenc",
-      ],
+    preset_choices: t.presetChoices ?? [
+      "copy",
+      "av1",
+      "hevc",
+      "hevc-nvenc",
+      "hevc-vaapi",
+      "av1-nvenc",
+    ],
     ask_preset: t.ask?.preset ?? true,
     ask_normalize: t.ask?.normalize ?? true,
     ask_attachments: t.ask?.attachments ?? true,
     default_preset: t.defaultPreset ?? "copy",
+    ...(t.categories ? { categories: t.categories } : {}),
     defaults: {
       audio: [],
       subs: [],
@@ -261,6 +263,8 @@ export class MockState {
       id,
       path: template.path,
       name: template.name ?? basename(template.path),
+      // the real API pins an output folder on every job
+      output_dir: "converted",
       state: "probing",
       created_at: new Date().toISOString(),
       skipped: template.skipped?.map((name) => ({
