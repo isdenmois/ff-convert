@@ -48,10 +48,10 @@ async function onRemove() {
 </script>
 
 <template>
-  <div class="card">
+  <div class="card" data-testid="job-card">
     <div class="head">
       <strong>{{ job.name }}</strong>
-      <span class="badge" :class="job.state">{{ stateLabel[job.state] ?? job.state }}</span>
+      <span class="badge" :class="job.state" :data-state="job.state">{{ stateLabel[job.state] ?? job.state }}</span>
       <span v-if="job.total > 0" class="muted">{{ job.done }}/{{ job.total }} files</span>
       <span class="spacer" />
       <button v-if="job.state === 'questions'" class="primary" @click="emit('answer', job.id)">

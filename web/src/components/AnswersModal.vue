@@ -34,11 +34,15 @@ const draft = computed(() => drafts[groupIdx.value]);
 const error = ref("");
 const busy = ref(false);
 
-function toggle(list: "audio" | "subs", index: number) {
+function toggle(list: "audio" | "subs", index: number, e: Event) {
   const arr = draft.value[list];
   const i = arr.indexOf(index);
   if (i >= 0) {
-    if (list === "audio" && arr.length === 1) return; // keep ≥1 audio track
+    if (list === "audio" && arr.length === 1) {
+      // keep ≥1 audio track; re-sync the checkbox the browser just unchecked
+      (e.target as HTMLInputElement).checked = true;
+      return;
+    }
     arr.splice(i, 1);
   } else {
     arr.push(index);
@@ -77,7 +81,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="backdrop" @click.self="emit('close')">
+  <div class="backdrop" data-testid="answers-modal" @click.self="emit('close')">
     <div class="modal">
       <header>
         <strong>{{ job.name }}</strong>
@@ -129,7 +133,7 @@ async function submit() {
           <input
             type="checkbox"
             :checked="draft.audio.includes(s.index)"
-            @change="toggle('audio', s.index)"
+            @change="toggle('audio', s.index, $event)"
           />
           {{ s.label }}
         </label>
@@ -142,7 +146,7 @@ async function submit() {
           <input
             type="checkbox"
             :checked="draft.subs.includes(s.index)"
-            @change="toggle('subs', s.index)"
+            @change="toggle('subs', s.index, $event)"
           />
           {{ s.label }}
         </label>

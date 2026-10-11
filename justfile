@@ -5,6 +5,7 @@ default:
 setup:
     cd web && bun install
     cd web && bunx lefthook install
+    cd web && bunx playwright install chromium
 
 # Build the TUI and web binaries into bin/
 build:
@@ -20,6 +21,10 @@ test:
 # Lint the frontend (biome: lint, format and import checks)
 lint:
     cd web && bun run lint
+
+# Run the Playwright e2e suite (mock API server + Vite dev server)
+e2e:
+    cd web && bun run e2e
 
 # Format all code (Go + frontend)
 format:

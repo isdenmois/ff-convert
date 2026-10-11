@@ -39,7 +39,7 @@ onMounted(load);
 
 <template>
   <h2>Library</h2>
-  <div class="toolbar">
+  <div class="toolbar" data-testid="library-browser">
     <button :disabled="path === ''" @click="up">↑ up</button>
     <span class="crumbs muted">
       / {{ path || '' }}
@@ -53,7 +53,15 @@ onMounted(load);
   <p v-else-if="loading" class="muted">loading…</p>
   <p v-else-if="entries.length === 0" class="muted">empty folder</p>
   <div v-else class="card list">
-    <div v-for="e in entries" :key="e.path" class="row" :class="{ dir: e.dir }" @dblclick="e.dir && open(e)">
+    <div
+      v-for="e in entries"
+      :key="e.path"
+      class="row"
+      :class="{ dir: e.dir }"
+      data-testid="library-row"
+      :data-dir="e.dir"
+      @dblclick="e.dir && open(e)"
+    >
       <span class="icon">{{ e.dir ? '📁' : '🎬' }}</span>
       <span class="name" @click="e.dir && open(e)">{{ e.name }}</span>
       <button v-if="!e.dir" @click="emit('convert', e.path)">Convert</button>

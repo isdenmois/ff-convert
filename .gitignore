@@ -6,6 +6,10 @@ web/dist/*
 !web/dist/.gitkeep
 web/node_modules/
 
+# playwright e2e artifacts
+web/test-results/
+web/playwright-report/
+
 # wails desktop artifacts
 cmd/ffconvert-desktop/build/
 cmd/ffconvert-desktop/frontend/node_modules/
