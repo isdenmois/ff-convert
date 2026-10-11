@@ -150,7 +150,15 @@ function buildQuestions(t: JobTemplate): QuestionsView {
   });
   return {
     groups,
-    preset_choices: t.presetChoices ?? ["copy", "av1", "hevc", "hevc-nvenc", "hevc-vaapi"],
+    preset_choices:
+      t.presetChoices ?? [
+        "copy",
+        "av1",
+        "hevc",
+        "hevc-nvenc",
+        "hevc-vaapi",
+        "av1-nvenc",
+      ],
     ask_preset: t.ask?.preset ?? true,
     ask_normalize: t.ask?.normalize ?? true,
     ask_attachments: t.ask?.attachments ?? true,

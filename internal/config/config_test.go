@@ -19,7 +19,7 @@ func TestLoadMissing(t *testing.T) {
 		t.Fatal("built-in av1 preset missing")
 	}
 	names := cfg.PresetNames()
-	want := []string{"copy", "av1", "hevc", "hevc-nvenc", "hevc-vaapi"}
+	want := []string{"copy", "av1", "hevc", "hevc-nvenc", "hevc-vaapi", "av1-nvenc"}
 	if len(names) != len(want) {
 		t.Fatalf("PresetNames() = %v, want %v", names, want)
 	}
@@ -94,8 +94,8 @@ output_dir: /mnt/media/converted
 		t.Fatal("NormalizeDefault() must honor explicit false")
 	}
 	names := cfg.PresetNames()
-	// copy, av1, hevc, hevc-nvenc, hevc-vaapi, av1-fast
-	if len(names) != 6 || names[5] != "av1-fast" {
+	// copy, av1, hevc, hevc-nvenc, hevc-vaapi, av1-nvenc, av1-fast
+	if len(names) != 7 || names[6] != "av1-fast" {
 		t.Fatalf("PresetNames = %v", names)
 	}
 }

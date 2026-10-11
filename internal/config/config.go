@@ -79,11 +79,14 @@ func Builtins() map[string]Preset {
 		"hevc":       {Codec: "libx265", Args: []string{"-preset", "medium", "-crf", "23"}, PixFmt: "yuv420p"},
 		"hevc-nvenc": {Codec: "hevc_nvenc", Args: []string{"-preset", "p5", "-cq", "26"}},
 		"hevc-vaapi": {Codec: "hevc_vaapi", Args: []string{"-qp", "24"}, VAAPIDevice: "/dev/dri/renderD128", VF: "format=nv12|vaapi,hwupload"},
+		// av1-nvenc needs an RTX 40+ GPU (AV1 NVENC); 10-bit keeps HDR
+		// sources intact via ffmpeg's color-metadata passthrough.
+		"av1-nvenc": {Codec: "av1_nvenc", Args: []string{"-preset", "p7", "-tune", "hq", "-cq", "28"}, PixFmt: "yuv420p10le"},
 	}
 }
 
 // builtinOrder is the display order of built-in preset names.
-var builtinOrder = []string{"copy", "av1", "hevc", "hevc-nvenc", "hevc-vaapi"}
+var builtinOrder = []string{"copy", "av1", "hevc", "hevc-nvenc", "hevc-vaapi", "av1-nvenc"}
 
 // Load reads the configuration. A missing file is not an error: the returned
 // config contains the built-in presets with Exists=false.

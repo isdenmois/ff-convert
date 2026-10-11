@@ -109,8 +109,10 @@ is used for all files without asking, and optional `audio.normalize` /
 `attachments` values pre-answer those questions. Track selection is always
 interactive. Built-in presets:
 `copy`, `av1` (SVT-AV1 p6 CRF 28 8-bit), `hevc` (libx265 CRF 23 8-bit),
-`hevc-nvenc`, `hevc-vaapi`; custom presets are raw ffmpeg encoder args, so
-hardware encoders can be configured freely.
+`hevc-nvenc`, `hevc-vaapi`, `av1-nvenc` (AV1 NVENC p7 CQ 28 10-bit, RTX 40+);
+custom presets are raw ffmpeg encoder args, so hardware encoders can be
+configured freely — `config.example.yaml` ships mobile (720p) and
+hardware-encode presets with their trade-offs documented.
 
 ## Layout
 

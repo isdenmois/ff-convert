@@ -18,16 +18,46 @@
 #default_preset: copy
 
 # Optional custom presets (merge over the built-ins; same name overrides).
-# Built-ins: copy, av1, hevc, hevc-nvenc, hevc-vaapi.
+# Built-ins: copy, av1, hevc, hevc-nvenc, hevc-vaapi, av1-nvenc.
+#
+# The presets below target playback on a modern phone (HEVC + AV1 decode),
+# capped at 720p — scale=min(1280\,iw):-2 downscales wider sources, never
+# upscales smaller ones. Pick per encoding machine:
+#   desktop (RTX 40/50) → av1-nvenc-mobile (any source, incl. HDR)
+#   laptop (Vega 8 APU) → hevc-vaapi-mobile (SDR only — VCN 1.0 encodes
+#                         8-bit HEVC, no AV1; VAAPI is its only hw path on
+#                         Linux) or mobile-av1 for HDR, patiently
+#   any CPU, fallback   → mobile-av1 (HDR-safe) / mobile-hevc (SDR)
+#
+# HDR: 10-bit (yuv420p10le) presets keep HDR sources HDR — ffmpeg propagates
+# the source color tags (bt2020/smpte2084) through the encode. Static HDR10
+# metadata (master-display, MaxCLL/MaxFALL), Dolby Vision and HDR10+ are not
+# carried over. 8-bit presets keep the tags but crush HDR to 8-bit (heavy
+# banding) — use them for SDR sources only.
+#
+# Docker: hardware encoders need device passthrough — NVENC requires the
+# nvidia container runtime (--gpus all), VAAPI requires /dev/dri.
 presets:
-  av1-fast:
+  mobile-av1:
     codec: libsvtav1
     args: ["-preset", "8", "-crf", "30"]
+    pix_fmt: yuv420p10le
+    vf: 'scale=min(1280\,iw):-2'
+  mobile-hevc: # SDR sources only (8-bit)
+    codec: libx265
+    args: ["-preset", "medium", "-crf", "25"]
     pix_fmt: yuv420p
-  # example hardware preset:
-  # hevc-nvenc-hq:
-  #   codec: hevc_nvenc
-  #   args: ["-preset", "p7", "-cq", "23"]
+    vf: 'scale=min(1280\,iw):-2'
+  av1-nvenc-mobile:
+    codec: av1_nvenc
+    args: ["-preset", "p7", "-tune", "hq", "-cq", "28"]
+    pix_fmt: yuv420p10le
+    vf: 'scale=min(1280\,iw):-2'
+  hevc-vaapi-mobile:
+    codec: hevc_vaapi
+    args: ["-qp", "24"]
+    vaapi_device: /dev/dri/renderD128
+    vf: 'scale=min(1280\,iw):-2,format=nv12|vaapi,hwupload'
 
 # Optional audio defaults (skips the corresponding question).
 audio:

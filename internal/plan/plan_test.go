@@ -136,6 +136,43 @@ func TestBuildVAAPI(t *testing.T) {
 	}
 }
 
+func TestBuildAv1Nvenc(t *testing.T) {
+	m := testMedia()
+	ans := Answers{Audio: []int{2}}
+	task, err := Build(m, "av1-nvenc", ans, PresetsMap(&config.Config{}), "128k", "/o.mkv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(task.Args, " ")
+	want := "-c:v av1_nvenc -preset p7 -tune hq -cq 28 -pix_fmt yuv420p10le"
+	if !strings.Contains(joined, want) {
+		t.Errorf("missing %q in:\n%s", want, joined)
+	}
+}
+
+func TestBuildScaleWithPixFmt(t *testing.T) {
+	m := testMedia()
+	ans := Answers{Audio: []int{2}}
+	presets := PresetsMap(&config.Config{Presets: map[string]config.Preset{
+		"mobile-av1": {
+			Codec:  "libsvtav1",
+			Args:   []string{"-preset", "8", "-crf", "30"},
+			PixFmt: "yuv420p10le",
+			VF:     `scale=min(1280\,iw):-2`,
+		},
+	}})
+	task, err := Build(m, "mobile-av1", ans, presets, "128k", "/o.mkv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(task.Args, " ")
+	// encoder args, then -pix_fmt, then -vf, all after -c:v.
+	want := `-c:v libsvtav1 -preset 8 -crf 30 -pix_fmt yuv420p10le -vf scale=min(1280\,iw):-2`
+	if !strings.Contains(joined, want) {
+		t.Errorf("missing %q in:\n%s", want, joined)
+	}
+}
+
 func TestBuildErrors(t *testing.T) {
 	m := testMedia()
 	presets := PresetsMap(&config.Config{})
