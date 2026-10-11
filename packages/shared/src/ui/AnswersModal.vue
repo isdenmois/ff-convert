@@ -94,10 +94,10 @@ async function onSubmit() {
   <div class="backdrop" data-testid="answers-modal" @click.self="emit('close')">
     <div class="modal">
       <header>
-        <strong>{{ job.name }}</strong>
+        <strong class="truncate">{{ job.name }}</strong>
         <button class="close" @click="emit('close')">×</button>
       </header>
-      <p v-if="job.output_dir" class="muted small outdir" :title="outputDir">
+      <p v-if="job.output_dir" class="muted small outdir truncate" :title="outputDir">
         Output: {{ outputDir }}
       </p>
 
@@ -212,15 +212,9 @@ header {
 }
 header strong {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .outdir {
   margin: 0 0 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 nav {
   display: flex;
@@ -264,11 +258,5 @@ footer {
   align-items: center;
   gap: 8px;
   margin-top: 12px;
-}
-.spacer {
-  flex: 1;
-}
-.error {
-  color: var(--err);
 }
 </style>

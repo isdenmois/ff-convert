@@ -52,10 +52,4 @@ header {
   gap: 8px;
   margin: 12px 0;
 }
-.toolbar .spacer {
-  flex: 1;
-}
-.error {
-  color: var(--err);
-}
 </style>

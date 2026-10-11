@@ -55,7 +55,7 @@ const stateLabel: Record<string, string> = {
 
     <p v-if="job.error" class="error">{{ job.error }}</p>
 
-    <p v-if="job.output_dir" class="muted small outdir" :title="job.output_dir">
+    <p v-if="job.output_dir" class="muted small outdir truncate" :title="job.output_dir">
       → {{ job.output_dir }}
     </p>
 
@@ -95,14 +95,8 @@ const stateLabel: Record<string, string> = {
   gap: 10px;
   margin-bottom: 8px;
 }
-.spacer {
-  flex: 1;
-}
 .outdir {
   margin: 0 0 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .overall {
   display: flex;
@@ -153,8 +147,5 @@ const stateLabel: Record<string, string> = {
 }
 .small {
   font-size: 12px;
-}
-.error {
-  color: var(--err);
 }
 </style>

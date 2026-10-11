@@ -148,3 +148,17 @@ select {
   padding: 14px 16px;
   margin-bottom: 10px;
 }
+
+.error {
+  color: var(--err);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

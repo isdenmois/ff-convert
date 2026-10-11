@@ -43,7 +43,4 @@ async function onConvert(path: string) {
 header {
   margin-bottom: 16px;
 }
-.error {
-  color: var(--err);
-}
 </style>

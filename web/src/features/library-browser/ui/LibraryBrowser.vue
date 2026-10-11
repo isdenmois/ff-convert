@@ -72,7 +72,4 @@ onMounted(store.load);
 .row.dir:hover .name {
   color: var(--accent);
 }
-.error {
-  color: var(--err);
-}
 </style>
