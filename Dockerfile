@@ -45,6 +45,8 @@ WORKDIR /data
 ENV FF_CONVERT_LIBRARY_DIR=/data \
     FF_CONVERT_PORT=8080
 VOLUME /data
+VOLUME /result
+VOLUME /config
 EXPOSE 8080
 COPY --from=build /out/ffconvert-web /usr/local/bin/ffconvert-web
 ENTRYPOINT ["ffconvert-web"]
