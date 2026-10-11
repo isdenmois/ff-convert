@@ -31,3 +31,8 @@ pre-commit:
     go-test:
       glob: "*.go"
       run: go test ./...
+
+pre-push:
+  commands:
+    e2e:
+      run: bun run --cwd web e2e
