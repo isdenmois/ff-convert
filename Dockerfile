@@ -34,8 +34,11 @@ LABEL org.opencontainers.image.title="ffconvert" \
       org.opencontainers.image.source="https://github.com/isden/ff-convert" \
       org.opencontainers.image.description="Batch movie transcoder wrapping ffmpeg → MKV (web UI)" \
       org.opencontainers.image.licenses="MIT"
+ARG PUID=1000
+ARG PGID=1000
 RUN apk add --no-cache ffmpeg \
- && adduser -D -u 1000 ffconvert \
+ && addgroup -g ${PGID} ffconvert \
+ && adduser -D -u ${PUID} -G ffconvert ffconvert \
  && mkdir -p /data && chown ffconvert:ffconvert /data
 USER ffconvert
 WORKDIR /data
