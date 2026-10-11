@@ -1,0 +1,3 @@
+/* Global theme: design tokens + shared element/utility styles from the
+ * workspace package; app-specific overrides would go below. */
+@import "@ffconvert/shared/styles/theme.css";

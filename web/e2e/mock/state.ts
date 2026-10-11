@@ -1,11 +1,5 @@
-import type {
-  Answers,
-  GroupView,
-  JobView,
-  LibraryEntry,
-  QuestionsView,
-  StreamView,
-} from "../../src/types";
+import type { Answers, GroupView, JobView, QuestionsView, StreamView } from "@ffconvert/shared/api";
+import type { LibraryEntry } from "../../src/shared/api/library";
 
 /**
  * Stateful mock of the ffconvert-web backend. Mirrors the real API contract

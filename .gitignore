@@ -4,6 +4,9 @@ bin/
 # built SPA (rebuilt with `bun run build` in web/); keep the placeholder for go:embed
 web/dist/*
 !web/dist/.gitkeep
+
+# bun workspace deps (root install links all members)
+node_modules/
 web/node_modules/
 
 # playwright e2e artifacts

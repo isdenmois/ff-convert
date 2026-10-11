@@ -1,0 +1,8 @@
+{
+  "name": "ff-convert",
+  "private": true,
+  "workspaces": ["packages/*", "web", "cmd/ffconvert-desktop/frontend"],
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15"
+  }
+}

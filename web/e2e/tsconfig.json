@@ -9,5 +9,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["**/*.ts", "../src/types.ts"]
+  "include": ["**/*.ts", "../src/shared/api/library.ts"]
 }

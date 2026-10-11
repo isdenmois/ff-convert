@@ -1,9 +1,9 @@
 default:
     @just --list
 
-# One-time setup after cloning: install frontend deps and git hooks
+# One-time setup after cloning: install workspace deps and git hooks
 setup:
-    cd web && bun install
+    bun install
     cd web && bunx lefthook install
     cd web && bunx playwright install chromium
 
@@ -16,20 +16,21 @@ build:
 # Run all tests (integration tests skip themselves without ffmpeg)
 test:
     go test ./...
+    cd packages/shared && bun run test
     cd web && bun run test
 
-# Lint the frontend (biome: lint, format and import checks)
+# Lint the frontends (biome: lint, format and import checks)
 lint:
-    cd web && bun run lint
+    bunx biome check packages web cmd/ffconvert-desktop/frontend
 
 # Run the Playwright e2e suite (mock API server + Vite dev server)
 e2e:
     cd web && bun run e2e
 
-# Format all code (Go + frontend)
+# Format all code (Go + frontends)
 format:
     gofmt -w .
-    cd web && bun run format
+    bunx biome format --write packages web cmd/ffconvert-desktop/frontend
 
 # Run the TUI against a file or folder
 run-tui path:

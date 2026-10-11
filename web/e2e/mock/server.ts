@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import type { Answers } from "@ffconvert/shared/api";
 import { type WebSocket, WebSocketServer } from "ws";
-import type { Answers } from "../../src/types";
 import { type JobTemplate, type LibraryTree, MockError, MockState } from "./state";
 
 /**
