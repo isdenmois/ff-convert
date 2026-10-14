@@ -37,7 +37,7 @@ const stateLabel: Record<string, string> = {
 <template>
   <div class="card" data-testid="job-card">
     <div class="head">
-      <strong>{{ job.name }}</strong>
+      <strong class="job-name">{{ job.name }}</strong>
       <span class="badge" :class="job.state" :data-state="job.state">{{ stateLabel[job.state] ?? job.state }}</span>
       <span v-if="job.total > 0" class="muted">{{ job.done }}/{{ job.total }} files</span>
       <span class="spacer" />
@@ -91,9 +91,24 @@ const stateLabel: Record<string, string> = {
 <style scoped>
 .head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
+}
+.job-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.head > button {
+  flex-shrink: 0;
+}
+.spacer {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .outdir {
   margin: 0 0 6px;
@@ -118,7 +133,8 @@ const stateLabel: Record<string, string> = {
 .file[data-state='failed'] .fname { color: var(--err); }
 .file[data-state='pending'] .fname, .file[data-state='canceled'] .fname { color: var(--muted); }
 .fname {
-  min-width: 220px;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -128,7 +144,7 @@ const stateLabel: Record<string, string> = {
   text-align: center;
 }
 .fpath {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

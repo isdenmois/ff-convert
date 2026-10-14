@@ -4,6 +4,7 @@ package group
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -29,20 +30,11 @@ func (g *Group) Name() string {
 		if l == "" {
 			l = "und"
 		}
-		if !contains(langs, l) {
+		if !slices.Contains(langs, l) {
 			langs = append(langs, l)
 		}
 	}
 	return fmt.Sprintf("%d file(s), audio: %s", len(g.Files), strings.Join(langs, ","))
-}
-
-func contains(s []string, v string) bool {
-	for _, x := range s {
-		if x == v {
-			return true
-		}
-	}
-	return false
 }
 
 // key builds the strict grouping key for a file's track lists. Absolute

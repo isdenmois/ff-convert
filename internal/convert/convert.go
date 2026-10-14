@@ -276,6 +276,21 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
+	// Attachments are only worth asking about when at least one file in the
+	// plan actually carries embedded attachments (fonts, posters, ...).
+	hasAttachments := false
+	for _, g := range p.Groups {
+		for _, m := range g.Files {
+			if len(m.Attachments) > 0 {
+				hasAttachments = true
+				break
+			}
+		}
+		if hasAttachments {
+			break
+		}
+	}
+
 	inputs := make([]AskInput, 0, len(p.Groups))
 	for _, g := range p.Groups {
 		input := AskInput{
@@ -285,7 +300,7 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 			PresetChoices:  cfg.PresetNames(),
 			AskPreset:      cfg.DefaultPreset == "",
 			AskNormalize:   cfg.Audio == nil || cfg.Audio.Normalize == nil,
-			AskAttachments: cfg.Attachments == nil,
+			AskAttachments: cfg.Attachments == nil && hasAttachments,
 		}
 		input.Defaults = plan.Answers{
 			Preset:      cfg.DefaultPresetName(),

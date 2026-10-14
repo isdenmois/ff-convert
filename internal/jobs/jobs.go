@@ -282,11 +282,17 @@ func (m *Manager) probeJob(j *job) {
 		return
 	}
 	inputs := p.AskInputs(m.cfg)
+
+	askAttachments := false
+	if len(inputs) > 0 {
+		askAttachments = inputs[0].AskAttachments
+	}
+
 	qv := &QuestionsView{
 		PresetChoices:  m.cfg.PresetNames(),
 		AskPreset:      m.cfg.DefaultPreset == "",
 		AskNormalize:   m.cfg.Audio == nil || m.cfg.Audio.Normalize == nil,
-		AskAttachments: m.cfg.Attachments == nil,
+		AskAttachments: askAttachments,
 		DefaultPreset:  m.cfg.DefaultPresetName(),
 	}
 	for i, in := range inputs {

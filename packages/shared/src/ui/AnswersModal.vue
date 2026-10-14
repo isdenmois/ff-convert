@@ -160,9 +160,8 @@ async function onSubmit() {
         </label>
       </section>
 
-      <section>
+      <section v-if="group.subs.length > 0">
         <h3>Subtitles (copied)</h3>
-        <p v-if="group.subs.length === 0" class="muted">none</p>
         <label v-for="s in group.subs" :key="s.index" class="track">
           <input
             type="checkbox"

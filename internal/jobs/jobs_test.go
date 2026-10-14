@@ -81,7 +81,7 @@ func TestJobLifecycle(t *testing.T) {
 	if len(q.Questions.Groups[0].Tasks) != 2 || q.Questions.Groups[0].Tasks[0].Name != "a.mkv" {
 		t.Fatalf("tasks = %+v", q.Questions.Groups[0].Tasks)
 	}
-	if !q.Questions.AskPreset || !q.Questions.AskNormalize || !q.Questions.AskAttachments {
+	if !q.Questions.AskPreset || !q.Questions.AskNormalize || q.Questions.AskAttachments {
 		t.Fatal("all questions must be asked with nil config")
 	}
 	if q.Questions.DefaultPreset != "copy" {

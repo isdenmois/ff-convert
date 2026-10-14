@@ -43,13 +43,18 @@ onMounted(store.load);
 <style scoped>
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
 }
 .crumbs {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .list .row {
   display: flex;
@@ -62,7 +67,11 @@ onMounted(store.load);
   border-bottom: none;
 }
 .row .name {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: default;
 }
 .row.dir .name {

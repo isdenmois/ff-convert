@@ -15,14 +15,17 @@ import (
 func newTestModel(t *testing.T, n int, askPreset, askNormalize, askAttachments bool) *model {
 	t.Helper()
 	audio := []probe.Stream{{Index: 1, Language: "eng"}}
+	subs := []probe.Stream{{Index: 2, Language: "eng"}}
 	m := &model{}
 	for i := 0; i < n; i++ {
 		m.asks = append(m.asks, convert.AskInput{
 			Group: &group.Group{
-				Files: []*probe.Media{{Path: "x.mkv"}},
-				Audio: audio,
+				Files:     []*probe.Media{{Path: "x.mkv"}},
+				Audio:     audio,
+				Subtitles: subs,
 			},
 			AudioDefaults:  []int{1},
+			SubsDefaults:   []int{2},
 			PresetChoices:  []string{"copy", "av1"},
 			AskPreset:      askPreset,
 			AskNormalize:   askNormalize,

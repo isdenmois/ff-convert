@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -167,7 +169,7 @@ func (c *Config) PresetNames() []string {
 			custom = append(custom, n)
 		}
 	}
-	sortStrings(custom)
+	sort.Strings(custom)
 	return append(names, custom...)
 }
 
@@ -197,12 +199,7 @@ func (c *Config) NormalizeDefault() bool {
 
 // HasCategory reports whether name is one of the configured categories.
 func (c *Config) HasCategory(name string) bool {
-	for _, cat := range c.Categories {
-		if cat == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.Categories, name)
 }
 
 // slugifyCategory turns a configured category label into a folder name:
@@ -243,12 +240,4 @@ func cleanCategories(in []string) []string {
 		out = append(out, c)
 	}
 	return out
-}
-
-func sortStrings(s []string) {
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && s[j] < s[j-1]; j-- {
-			s[j], s[j-1] = s[j-1], s[j]
-		}
-	}
 }

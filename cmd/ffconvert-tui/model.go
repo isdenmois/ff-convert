@@ -132,6 +132,17 @@ func (m *model) enterGroup(gi int) {
 func (m *model) nextStep() {
 	switch m.step {
 	case stepAudio:
+		// Skip the subtitle selection step entirely when a group has no
+		// subtitle tracks: there is nothing to select.
+		if len(m.currentAsk().Group.Subtitles) == 0 {
+			ans := m.reply[m.groupIdx]
+			if ans.Subs == nil {
+				ans.Subs = append([]int(nil), m.currentAsk().SubsDefaults...)
+			}
+			m.reply[m.groupIdx] = ans
+			m.nextGroup()
+			return
+		}
 		m.step = stepSubs
 		m.resetCursorForStep()
 	case stepSubs:

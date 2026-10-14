@@ -132,7 +132,7 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 		if len(in.SubsDefaults) != 1 {
 			t.Errorf("sub defaults = %v", in.SubsDefaults)
 		}
-		if !in.AskPreset || !in.AskNormalize || !in.AskAttachments {
+		if !in.AskPreset || !in.AskNormalize || in.AskAttachments {
 			t.Error("all questions must be asked with unset config")
 		}
 		// Defaults must preselect copy and normalization-on.
