@@ -23,11 +23,6 @@ async function onConvert(path: string) {
 <template>
   <header>
     <h1>ff-convert</h1>
-    <span class="muted" data-testid="conn-status">
-      mkv transcoder · av1 / hevc / copy · opus stereo
-      <template v-if="store.ws === 'open'"> · live</template>
-      <template v-else> · offline</template>
-    </span>
   </header>
 
   <p v-if="error" class="error">{{ error }}</p>

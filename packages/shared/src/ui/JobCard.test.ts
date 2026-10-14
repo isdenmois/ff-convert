@@ -120,7 +120,7 @@ describe("JobCard", () => {
       render(JobCard, { props: { job } });
 
       // Assert
-      expect(screen.getByText("→ /out/movie")).toBeTruthy();
+      expect(screen.getByText("/out/movie")).toBeTruthy();
     });
 
     it("should list skipped files by name", () => {
@@ -136,14 +136,15 @@ describe("JobCard", () => {
       render(JobCard, { props: { job } });
 
       // Assert
-      expect(screen.getByText("skipped (already converted): a.mkv, b.mkv")).toBeTruthy();
+      expect(screen.getByText("2 skipped")).toBeTruthy();
     });
 
-    it("should show a done file with its output path", () => {
+    it("should show a done file", () => {
       // Arrange
       const job = baseJob({
         files: [
           { path: "/in/1.mkv", name: "1.mkv", output: "/out/1.mkv", state: "done", percent: 1 },
+          { path: "/in/2.mkv", name: "2.mkv", output: "/out/2.mkv", state: "pending", percent: 0 },
         ],
       });
 
@@ -153,13 +154,12 @@ describe("JobCard", () => {
       // Assert
       expect(screen.getByText("1.mkv")).toBeTruthy();
       expect(screen.getByText("✓")).toBeTruthy();
-      expect(screen.getByText("/out/1.mkv")).toBeTruthy();
     });
 
     it("should show progress and speed for a running file", () => {
       // Arrange
       const job = baseJob({
-        total: 1,
+        total: 2,
         files: [
           {
             path: "/in/2.mkv",
@@ -169,6 +169,7 @@ describe("JobCard", () => {
             percent: 0.42,
             speed: "3x",
           },
+          { path: "/in/3.mkv", name: "3.mkv", output: "", state: "pending", percent: 0 },
         ],
       });
 
@@ -177,7 +178,7 @@ describe("JobCard", () => {
 
       // Assert
       expect(screen.getByText("▶")).toBeTruthy();
-      expect(screen.getByText("42% 3x")).toBeTruthy();
+      expect(screen.getByText("42%")).toBeTruthy();
     });
 
     it("should mark a failed file and expose its error", () => {
@@ -192,6 +193,7 @@ describe("JobCard", () => {
             percent: 0,
             error: "boom",
           },
+          { path: "/in/4.mkv", name: "4.mkv", output: "", state: "pending", percent: 0 },
         ],
       });
 

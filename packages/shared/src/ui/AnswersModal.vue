@@ -98,7 +98,7 @@ async function onSubmit() {
         <button class="close" @click="emit('close')">×</button>
       </header>
       <p v-if="job.output_dir" class="muted small outdir truncate" :title="outputDir">
-        Output: {{ outputDir }}
+        {{ outputDir }}
       </p>
 
       <section v-if="q.categories?.length" class="inline">
@@ -119,7 +119,7 @@ async function onSubmit() {
       </section>
 
       <section v-if="q.ask_normalize" class="inline">
-        <h3>Normalize loudness — loudnorm i=-13 (all files)</h3>
+        <h3>Normalize loudness (all files)</h3>
         <label class="track">
           <input type="checkbox" v-model="normalize" />
           {{ normalize ? "enabled" : "disabled" }}
@@ -127,7 +127,7 @@ async function onSubmit() {
       </section>
 
       <section v-if="q.ask_attachments" class="inline">
-        <h3>Attachments — fonts, posters (all files)</h3>
+        <h3>Attachments (all files)</h3>
         <label class="track">
           <input type="checkbox" v-model="attachments" />
           {{ attachments ? "copy" : "omit" }}
@@ -144,9 +144,6 @@ async function onSubmit() {
           Group {{ i + 1 }} ({{ g.file_count }} files)
         </button>
       </nav>
-      <p v-else class="muted">
-        {{ group.file_count }} file(s) share this track layout.
-      </p>
 
       <section>
         <h3>Audio tracks → opus stereo</h3>

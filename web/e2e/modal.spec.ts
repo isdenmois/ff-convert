@@ -133,7 +133,6 @@ test.describe("answers modal", () => {
 
     await expect(modal.categorySelect).toBeVisible();
     await expect(modal.categorySelect).toHaveValue("");
-    await expect(modal.outputLine).toContainText("Output:");
     await expect(modal.outputLine).not.toContainText("/series");
 
     await modal.categorySelect.selectOption("series");

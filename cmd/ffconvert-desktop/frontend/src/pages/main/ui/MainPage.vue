@@ -26,7 +26,6 @@ onMounted(async () => {
 <template>
   <header>
     <h1>ff-convert</h1>
-    <span class="muted">mkv transcoder · av1 / hevc / copy · opus stereo</span>
   </header>
 
   <div class="toolbar">

@@ -8,7 +8,7 @@ const store = useJobsStore();
 <template>
   <h2>Queue</h2>
   <div v-if="store.jobs.length === 0" class="muted">
-    No jobs yet — add a movie file or a folder with movie files.
+    No jobs yet.
   </div>
   <JobCard
     v-for="job in store.orderedJobs"

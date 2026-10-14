@@ -67,7 +67,7 @@ describe("AnswersModal", () => {
 
       // Assert
       expect(screen.getByText("movie")).toBeTruthy();
-      expect(screen.getByText("Output: /out/movie")).toBeTruthy();
+      expect(screen.getByText("/out/movie")).toBeTruthy();
     });
 
     it("should preselect the default audio and subtitle tracks", () => {
@@ -116,7 +116,6 @@ describe("AnswersModal", () => {
       render(AnswersModal, { props: { job, submit: vi.fn() } });
 
       // Assert
-      expect(screen.getByText("2 file(s) share this track layout.")).toBeTruthy();
       expect(screen.queryByRole("button", { name: /Group 1/ })).toBeNull();
     });
 
@@ -225,14 +224,14 @@ describe("AnswersModal", () => {
       // Act / Assert — "no category" selected by default, flat output shown.
       const select = screen.getByDisplayValue("— no category —") as HTMLSelectElement;
       expect(select.value).toBe("");
-      expect(screen.getByText("Output: /out/movie")).toBeTruthy();
+      expect(screen.getByText("/out/movie")).toBeTruthy();
       expect(screen.getByRole("option", { name: "series" })).toBeTruthy();
 
       // Act
       await fireEvent.update(select, "series");
 
       // Assert
-      expect(screen.getByText("Output: /out/movie/series")).toBeTruthy();
+      expect(screen.getByText("/out/movie/series")).toBeTruthy();
 
       // Act
       await fireEvent.click(screen.getByRole("button", { name: "Start conversion" }));

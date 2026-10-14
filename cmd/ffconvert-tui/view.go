@@ -233,26 +233,28 @@ func (m model) viewRunning() string {
 	}
 	b.WriteString("\n\n")
 
-	for _, f := range sn.Files {
-		name := filepath.Base(f.Path)
-		switch f.State {
-		case convert.StateDone:
-			b.WriteString(okStyle.Render("  ✓ ") + name + "\n")
-		case convert.StateFailed:
-			b.WriteString(errStyle.Render("  ✗ ") + name + "\n")
-		case convert.StateRunning:
-			bar := progressBar.ViewAs(f.Percent)
-			speed := f.Speed
-			if speed == "" {
-				speed = "…"
+	if len(sn.Files) > 1 {
+		for _, f := range sn.Files {
+			name := filepath.Base(f.Path)
+			switch f.State {
+			case convert.StateDone:
+				b.WriteString(okStyle.Render("  ✓ ") + name + "\n")
+			case convert.StateFailed:
+				b.WriteString(errStyle.Render("  ✗ ") + name + "\n")
+			case convert.StateRunning:
+				bar := progressBar.ViewAs(f.Percent)
+				speed := f.Speed
+				if speed == "" {
+					speed = "…"
+				}
+				b.WriteString(fmt.Sprintf("  ▶ %s %s  %s\n", name, bar, dimStyle.Render(speed)))
+			case convert.StateCanceled:
+				b.WriteString(dimStyle.Render("  − " + name + " (canceled)"))
+			default:
+				b.WriteString(dimStyle.Render("  · " + name))
 			}
-			b.WriteString(fmt.Sprintf("  ▶ %s %s  %s\n", name, bar, dimStyle.Render(speed)))
-		case convert.StateCanceled:
-			b.WriteString(dimStyle.Render("  − " + name + " (canceled)"))
-		default:
-			b.WriteString(dimStyle.Render("  · " + name))
+			b.WriteString("\n")
 		}
-		b.WriteString("\n")
 	}
 	b.WriteString(helpStyle.Render("\nctrl+c cancel remaining"))
 	return b.String()

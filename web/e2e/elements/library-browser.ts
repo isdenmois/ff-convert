@@ -29,7 +29,7 @@ export class LibraryBrowserElement extends PageElement {
   }
 
   get emptyMessage(): Locator {
-    return this.page.getByText("empty folder");
+    return this.page.getByText("empty");
   }
 
   get errorMessage(): Locator {

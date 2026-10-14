@@ -16,7 +16,6 @@ test.describe("conversion happy path", () => {
     await expect(card.badge).toContainText("needs answers");
     await expect(modal.root).toBeVisible();
     await expect(modal.title).toContainText("movie1.mkv");
-    await expect(modal.root).toContainText("1 file(s) share this track layout.");
 
     // defaults are preselected: first audio track on, the rest off
     await expect(modal.audioTrack("eng  AC3  5.1")).toBeChecked();
@@ -26,19 +25,15 @@ test.describe("conversion happy path", () => {
     await modal.submit();
     await expect(modal.root).toBeHidden();
 
-    // running: overall bar, per-file percent + speed, elapsed label
+    // running: overall bar, elapsed label
     await expect(card.badge).toContainText("running");
-    await expect(card.fileRow("movie1.mkv")).toContainText("%");
-    await expect(card.fileRow("movie1.mkv")).toContainText("1.8x");
     await expect(card.timeLabel).toContainText("elapsed");
     await expect(card.overallPercent).toContainText("%");
     await card.screenshot("job-running");
 
-    // done: checkmark glyphs, counters, total run time
+    // done: counters, total run time
     await expect(card.badge).toContainText("done", { timeout: 15_000 });
     await expect(card.filesCounter).toHaveText("1/1 files");
-    await expect(card.fileRowsByState("done")).toHaveCount(1);
-    await expect(card.fileRow("movie1.mkv")).toContainText("✓");
     await expect(card.timeLabel).toContainText("took");
     await card.screenshot("job-done");
 

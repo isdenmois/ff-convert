@@ -56,7 +56,7 @@ const stateLabel: Record<string, string> = {
     <p v-if="job.error" class="error">{{ job.error }}</p>
 
     <p v-if="job.output_dir" class="muted small outdir truncate" :title="job.output_dir">
-      → {{ job.output_dir }}
+      {{ job.output_dir }}
     </p>
 
     <div v-if="job.total > 0" class="overall">
@@ -66,10 +66,10 @@ const stateLabel: Record<string, string> = {
     </div>
 
     <div v-if="job.skipped?.length" class="muted small">
-      skipped (already converted): {{ job.skipped.map((s) => s.name).join(', ') }}
+      {{ job.skipped.length }} skipped
     </div>
 
-    <div v-if="job.files?.length" class="files">
+    <div v-if="job.files && job.files.length > 1" class="files">
       <div v-for="f in job.files" :key="f.path" class="file" :data-state="f.state">
         <span class="fstate">
           {{ f.state === 'done' ? '✓' : f.state === 'failed' ? '✗' : f.state === 'running' ? '▶' : '·' }}
@@ -77,12 +77,9 @@ const stateLabel: Record<string, string> = {
         <span class="fname">{{ f.name }}</span>
         <template v-if="f.state === 'running'">
           <div class="bar"><div :style="{ width: Math.round(f.percent * 100) + '%' }" /></div>
-          <span class="muted small pct">{{ Math.round(f.percent * 100) }}% {{ f.speed }}</span>
+          <span class="muted small pct">{{ Math.round(f.percent * 100) }}%</span>
         </template>
         <span v-else-if="f.state === 'failed'" class="error small" :title="f.error">failed</span>
-        <span v-if="f.state !== 'running' && f.output" class="muted small fpath" :title="f.output">
-          {{ f.output }}
-        </span>
       </div>
     </div>
   </div>

@@ -22,7 +22,7 @@ onMounted(store.load);
   </div>
   <p v-if="store.error" class="error">{{ store.error }}</p>
   <p v-else-if="store.loading" class="muted">loading…</p>
-  <p v-else-if="store.entries.length === 0" class="muted">empty folder</p>
+  <p v-else-if="store.entries.length === 0" class="muted">empty</p>
   <div v-else class="card list">
     <div
       v-for="e in store.entries"
