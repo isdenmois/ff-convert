@@ -144,6 +144,12 @@ func (m *model) nextStep() {
 			return
 		}
 		m.step = stepSubs
+		// Reset the checked set for the subtitle step: it was holding the
+		// audio selection up to now. Preselect English subtitle tracks.
+		m.checked = map[int]bool{}
+		for _, idx := range m.currentAsk().SubsDefaults {
+			m.checked[idx] = true
+		}
 		m.resetCursorForStep()
 	case stepSubs:
 		m.nextGroup()
@@ -220,6 +226,14 @@ func (m *model) resetCursorForStep() {
 				break
 			}
 		}
+	case stepSubs:
+		// Preselect English subtitle tracks (reset from any prior
+		// audio selection); see nextStep for primary transition.
+		m.checked = map[int]bool{}
+		for _, idx := range m.currentAsk().SubsDefaults {
+			m.checked[idx] = true
+		}
+		m.cursor = 0
 	case stepNormalize:
 		m.cursor = 0 // default: Yes (normalization on)
 	case stepAttach:

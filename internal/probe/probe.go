@@ -67,7 +67,7 @@ func (s Stream) IsEnglish() bool { return IsEnglish(s.Language) }
 // IsEnglish reports whether an ISO 639 language code is English.
 func IsEnglish(lang string) bool {
 	switch strings.ToLower(strings.TrimSpace(lang)) {
-	case "en", "eng":
+	case "en", "eng", "английский":
 		return true
 	}
 	return false
