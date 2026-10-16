@@ -160,9 +160,17 @@ test.describe("answers modal", () => {
     await mainPage.open();
     const modal = mainPage.modal;
 
+    // The card shows the source folder before any category is chosen.
+    await expect(mainPage.jobs.card("Some Show").outputFolder).toHaveText("converted/Some Show");
     await expect(modal.outputLine).toContainText("converted/Some Show");
     await modal.categorySelect.selectOption("series");
     await expect(modal.outputLine).toContainText("converted/series/Some Show");
+
+    await modal.submit();
+    await expect(modal.root).toBeHidden();
+    await expect(mainPage.jobs.card("Some Show").outputFolder).toHaveText(
+      "converted/series/Some Show",
+    );
   });
 
   test("backdrop click closes the modal; the card reopens it", async ({ mainPage, mock }) => {

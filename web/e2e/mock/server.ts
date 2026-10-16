@@ -84,8 +84,15 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   }
   const answers = pathname.match(/^\/api\/jobs\/([^/]+)\/answers$/);
   if (answers && method === "POST") {
-    const { answers: submitted } = (body ?? {}) as { answers?: Answers[] };
-    return writeJSON(res, 200, await state.submitAnswers(answers[1], submitted ?? []));
+    const { answers: submitted, category } = (body ?? {}) as {
+      answers?: Answers[];
+      category?: string;
+    };
+    return writeJSON(
+      res,
+      200,
+      await state.submitAnswers(answers[1], category ?? "", submitted ?? []),
+    );
   }
   const cancel = pathname.match(/^\/api\/jobs\/([^/]+)\/cancel$/);
   if (cancel && method === "POST") {

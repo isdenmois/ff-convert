@@ -55,8 +55,8 @@ const stateLabel: Record<string, string> = {
 
     <p v-if="job.error" class="error">{{ job.error }}</p>
 
-    <p v-if="job.output_dir" class="muted small outdir truncate" :title="job.output_dir">
-      {{ job.output_dir }}
+    <p v-if="job.output_folder" class="muted small outdir truncate" :title="job.output_folder">
+      {{ job.output_folder }}
     </p>
 
     <div v-if="job.total > 0" class="overall">

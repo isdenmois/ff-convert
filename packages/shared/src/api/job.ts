@@ -68,6 +68,12 @@ export interface JobView {
   name: string;
   /** Output folder pinned when the job was created (desktop only). */
   output_dir?: string;
+  /**
+   * Folder this job's converted files are written to: `output_dir` plus the
+   * chosen category and the source's own folder name for folder sources.
+   * Present on every job snapshot (equal to `output_dir` while probing).
+   */
+  output_folder?: string;
   state: string;
   created_at: string;
   questions?: QuestionsView;

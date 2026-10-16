@@ -319,13 +319,27 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 	return inputs
 }
 
+// OutputRoot returns the folder a source's converted files are written to:
+// outDir, then the category subfolder (a web-UI choice), then the source's own
+// folder name for folder sources.
+func OutputRoot(outDir, category, sourceFolder string) string {
+	if category != "" {
+		outDir = filepath.Join(outDir, category)
+	}
+	if sourceFolder != "" {
+		outDir = filepath.Join(outDir, sourceFolder)
+	}
+	return outDir
+}
+
 // BuildSession assembles the runnable session from per-group answers,
 // writing outputs to outDir. The answers slice is index-aligned with the
 // AskInputs result. Preset, Normalize and Attachments are queue-item-wide
 // choices expected to be identical across groups; an empty Preset falls back
 // to the configured default preset. Category, when set, is a configured
-// output subfolder: outputs land in outDir/category. A folder source adds its
-// own name as a subfolder: outDir[/category]/<source folder>.
+// output subfolder. The folder the files land in is
+// OutputRoot(outDir, category, sourceFolder): category first, then the
+// source's own folder name.
 func (p *Plan) BuildSession(cfg *config.Config, category string, answers []plan.Answers, outDir string) (*Session, error) {
 	if cfg == nil {
 		cfg = &config.Config{}
@@ -339,13 +353,7 @@ func (p *Plan) BuildSession(cfg *config.Config, category string, answers []plan.
 	presets := plan.PresetsMap(cfg)
 	sess := &Session{Source: p.Source, Skipped: p.Skipped, filesByPath: make(map[string]*FileTask)}
 	defPreset := cfg.DefaultPresetName()
-	outRoot := outDir
-	if category != "" {
-		outRoot = filepath.Join(outDir, category)
-	}
-	if p.SourceFolder != "" {
-		outRoot = filepath.Join(outRoot, p.SourceFolder)
-	}
+	outRoot := OutputRoot(outDir, category, p.SourceFolder)
 	for gi, g := range p.Groups {
 		if g.Audio == nil && len(g.Files) > 0 {
 			g.Audio = g.Files[0].Audio

@@ -127,16 +127,21 @@ type JobView struct {
 	Name string `json:"name"`
 	// OutputDir is the output folder pinned when the job was created; later
 	// changes to the Manager's output dir do not affect it.
-	OutputDir string         `json:"output_dir,omitempty"`
-	State     State          `json:"state"`
-	CreatedAt time.Time      `json:"created_at"`
-	Questions *QuestionsView `json:"questions,omitempty"`
-	Files     []FileView     `json:"files,omitempty"`
-	Skipped   []SkippedView  `json:"skipped,omitempty"`
-	Overall   float64        `json:"overall"`
-	Done      int            `json:"done"`
-	Failed    int            `json:"failed"`
-	Total     int            `json:"total"`
+	OutputDir string `json:"output_dir,omitempty"`
+	// OutputFolder is the folder this job's converted files are written to:
+	// OutputDir plus the category chosen with the answers and, for folder
+	// sources, the source's own folder name. Equal to OutputDir while the
+	// source has not been scanned yet.
+	OutputFolder string         `json:"output_folder,omitempty"`
+	State        State          `json:"state"`
+	CreatedAt    time.Time      `json:"created_at"`
+	Questions    *QuestionsView `json:"questions,omitempty"`
+	Files        []FileView     `json:"files,omitempty"`
+	Skipped      []SkippedView  `json:"skipped,omitempty"`
+	Overall      float64        `json:"overall"`
+	Done         int            `json:"done"`
+	Failed       int            `json:"failed"`
+	Total        int            `json:"total"`
 	// ElapsedMs is the conversion wall time so far — the total run duration
 	// once the job finishes; omitted until the first file starts converting.
 	ElapsedMs int64 `json:"elapsed_ms,omitempty"`
@@ -150,7 +155,10 @@ type job struct {
 	id   string
 	path string
 	// outDir is the output folder pinned at creation time (see JobView).
-	outDir    string
+	outDir string
+	// category is the output subfolder chosen with the answers ("" = the
+	// output root); jobs created without a category keep the root.
+	category  string
 	created   time.Time
 	state     State
 	err       string
@@ -346,6 +354,7 @@ func (m *Manager) SubmitAnswers(id string, category string, answers []plan.Answe
 		return err
 	}
 	j.answers = answers
+	j.category = category
 	j.sess = sess
 	j.state = StateQueued
 	m.mu.Unlock()
@@ -471,15 +480,20 @@ func (m *Manager) byID(id string) *job {
 
 // view requires m.mu held.
 func (m *Manager) view(j *job) JobView {
+	sourceFolder := ""
+	if j.plan != nil {
+		sourceFolder = j.plan.SourceFolder
+	}
 	v := JobView{
-		ID:        j.id,
-		Path:      j.path,
-		Name:      filepath.Base(j.path),
-		OutputDir: j.outDir,
-		State:     j.state,
-		CreatedAt: j.created,
-		Error:     j.err,
-		Questions: j.questions,
+		ID:           j.id,
+		Path:         j.path,
+		Name:         filepath.Base(j.path),
+		OutputDir:    j.outDir,
+		OutputFolder: convert.OutputRoot(j.outDir, j.category, sourceFolder),
+		State:        j.state,
+		CreatedAt:    j.created,
+		Error:        j.err,
+		Questions:    j.questions,
 	}
 	if j.plan != nil {
 		for _, s := range j.plan.Skipped {

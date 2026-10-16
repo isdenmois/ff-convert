@@ -112,15 +112,16 @@ describe("JobCard", () => {
       expect(screen.getByText("probe failed")).toBeTruthy();
     });
 
-    it("should show the output dir", () => {
+    it("should show the job's output folder rather than the shared output root", () => {
       // Arrange
-      const job = baseJob({ output_dir: "/out/movie" });
+      const job = baseJob({ output_dir: "/out", output_folder: "/out/series/show" });
 
       // Act
       render(JobCard, { props: { job } });
 
       // Assert
-      expect(screen.getByText("/out/movie")).toBeTruthy();
+      expect(screen.getByText("/out/series/show")).toBeTruthy();
+      expect(screen.queryByText("/out")).toBeNull();
     });
 
     it("should list skipped files by name", () => {

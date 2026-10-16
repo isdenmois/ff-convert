@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/isden/ff-convert/internal/config"
 	"github.com/isden/ff-convert/internal/plan"
 	"github.com/isden/ff-convert/internal/pool"
 )
@@ -71,7 +72,13 @@ func TestJobLifecycle(t *testing.T) {
 	if v.OutputDir != outDir {
 		t.Fatalf("output dir = %q, want %q", v.OutputDir, outDir)
 	}
+	if v.OutputFolder != outDir {
+		t.Fatalf("probing output folder = %q, want %q", v.OutputFolder, outDir)
+	}
 	q := waitState(t, m, v.ID, StateQuestions)
+	if want := filepath.Join(outDir, filepath.Base(dir)); q.OutputFolder != want {
+		t.Fatalf("questions output folder = %q, want %q", q.OutputFolder, want)
+	}
 	if q.Questions == nil || len(q.Questions.Groups) != 1 {
 		t.Fatalf("questions = %+v", q.Questions)
 	}
@@ -109,9 +116,16 @@ func TestJobLifecycle(t *testing.T) {
 	if done.EtaMs != 0 {
 		t.Fatalf("done view eta_ms = %d, want 0", done.EtaMs)
 	}
+	want := filepath.Join(outDir, filepath.Base(dir))
+	if done.OutputFolder != want {
+		t.Fatalf("done output folder = %q, want %q", done.OutputFolder, want)
+	}
 	for _, f := range done.Files {
 		if _, err := os.Stat(f.Output); err != nil {
 			t.Fatalf("output missing: %v", err)
+		}
+		if filepath.Dir(f.Output) != want {
+			t.Fatalf("file %s output %q not under %q", f.Name, f.Output, want)
 		}
 	}
 	if notifications < 3 {
@@ -175,5 +189,41 @@ func TestOutputDirPinnedAtCreate(t *testing.T) {
 	}
 	if b.OutputDir != "/out/second" {
 		t.Fatalf("new job must use the current dir, got %q", b.OutputDir)
+	}
+}
+
+// The card's folder must include the category chosen with the answers, so it
+// matches where the files are actually written.
+func TestOutputFolderIncludesCategory(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not available")
+	}
+	dir := t.TempDir()
+	outDir := t.TempDir()
+	makeFixture(t, dir, "a.mkv")
+
+	m := NewManager(&config.Config{Categories: []string{"series"}}, pool.New(1), outDir)
+	v, err := m.Create(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := waitState(t, m, v.ID, StateQuestions)
+	if want := filepath.Join(outDir, filepath.Base(dir)); q.OutputFolder != want {
+		t.Fatalf("questions output folder = %q, want %q", q.OutputFolder, want)
+	}
+
+	answers := []plan.Answers{{Audio: q.Questions.Groups[0].AudioDefaults, Preset: "copy"}}
+	if err := m.SubmitAnswers(v.ID, "series", answers); err != nil {
+		t.Fatal(err)
+	}
+	done := waitState(t, m, v.ID, StateDone)
+	want := filepath.Join(outDir, "series", filepath.Base(dir))
+	if done.OutputFolder != want {
+		t.Fatalf("done output folder = %q, want %q", done.OutputFolder, want)
+	}
+	for _, f := range done.Files {
+		if filepath.Dir(f.Output) != want {
+			t.Fatalf("file %s output %q not under %q", f.Name, f.Output, want)
+		}
 	}
 }

@@ -236,3 +236,20 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 		t.Fatalf("b.mkv video should be re-encoded mpeg4, got %s", m.Video[0].Codec)
 	}
 }
+
+// The output root ordering (category before source folder) is what the queue
+// cards display, so it is pinned here.
+func TestOutputRoot(t *testing.T) {
+	cases := []struct{ out, category, source, want string }{
+		{"/out", "", "", "/out"},
+		{"/out", "series", "", "/out/series"},
+		{"/out", "", "show", "/out/show"},
+		{"/out", "series", "show", "/out/series/show"},
+		{"converted", "series", "show", "converted/series/show"},
+	}
+	for _, c := range cases {
+		if got := OutputRoot(c.out, c.category, c.source); got != c.want {
+			t.Errorf("OutputRoot(%q, %q, %q) = %q, want %q", c.out, c.category, c.source, got, c.want)
+		}
+	}
+}

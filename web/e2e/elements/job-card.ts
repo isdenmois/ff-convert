@@ -40,6 +40,11 @@ export class JobCardElement extends PageElement {
     return this.root.locator(".time");
   }
 
+  /** The job's own output folder line (not the shared output root). */
+  get outputFolder(): Locator {
+    return this.root.locator("p.outdir");
+  }
+
   fileRow(name: string): Locator {
     return this.root.locator(".file").filter({ hasText: name });
   }

@@ -216,6 +216,9 @@ export interface RecordedRequest {
 
 const TERMINAL = new Set(["done", "failed", "canceled"]);
 
+/** Output root every job is created under (the real config default). */
+const OUTPUT_ROOT = "converted";
+
 export class MockState {
   private jobs: MockJob[] = [];
   private tree: LibraryTree = {};
@@ -264,8 +267,12 @@ export class MockState {
       id,
       path: template.path,
       name: template.name ?? basename(template.path),
-      // the real API pins an output folder on every job
-      output_dir: "converted",
+      // the real API pins an output root on every job and reports the
+      // resolved folder (root + source folder once the source is scanned)
+      output_dir: OUTPUT_ROOT,
+      output_folder: [OUTPUT_ROOT, VIDEO_EXT.test(template.path) ? "" : basename(template.path)]
+        .filter(Boolean)
+        .join("/"),
       state: "probing",
       created_at: new Date().toISOString(),
       skipped: template.skipped?.map((name) => ({
@@ -307,7 +314,7 @@ export class MockState {
     return structuredClone(job.view);
   }
 
-  async submitAnswers(id: string, answers: Answers[]): Promise<JobView> {
+  async submitAnswers(id: string, category: string, answers: Answers[]): Promise<JobView> {
     const job = this.mustFind(id, "questions");
     const t = job.template;
     if (t.answerDelayMs) {
@@ -330,6 +337,8 @@ export class MockState {
       };
     });
     job.view.state = "queued";
+    const sourceFolder = job.view.questions?.source_folder ?? "";
+    job.view.output_folder = [OUTPUT_ROOT, category, sourceFolder].filter(Boolean).join("/");
     delete job.view.questions;
     this.onChange();
     job.timers.push(setTimeout(() => this.start(job), t.startMs ?? 200));
