@@ -47,6 +47,10 @@ type Skipped struct {
 type Result struct {
 	Files   []string  `json:"files"`
 	Skipped []Skipped `json:"skipped"`
+	// SourceFolder is the source's own folder name when the source is a
+	// folder ("" for a single-file source): its outputs are written into a
+	// subfolder of that name inside the output folder.
+	SourceFolder string `json:"source_folder,omitempty"`
 }
 
 // IsVideoFile reports whether the path has a movie extension.
@@ -62,8 +66,9 @@ func OutputPathIn(dir, file string) string {
 
 // Scan resolves a source path (single file or folder) to the list of movie
 // files to convert. Folder scans are top-level only, sorted naturally
-// (case-insensitive, number-aware), and skip files whose output already
-// exists in outDir.
+// (case-insensitive, number-aware), and skip files whose output already exists
+// in outDir — either <outDir>/<stem>.mkv or, for folder sources,
+// <outDir>/<source folder>/<stem>.mkv.
 func Scan(source, outDir string) (Result, error) {
 	info, err := os.Stat(source)
 	if err != nil {
@@ -84,6 +89,8 @@ func Scan(source, outDir string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	folder := filepath.Base(filepath.Clean(source))
+	res.SourceFolder = folder
 	for _, e := range entries {
 		if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
 			continue
@@ -101,6 +108,12 @@ func Scan(source, outDir string) (Result, error) {
 		}
 		if fileExists(out) {
 			res.Skipped = append(res.Skipped, Skipped{Path: p, Output: out})
+			continue
+		}
+		// Folder sources write into <outDir>/<source folder>/ (see
+		// SourceFolder): an output from an earlier run must skip too.
+		if nout := OutputPathIn(filepath.Join(outDir, folder), p); fileExists(nout) {
+			res.Skipped = append(res.Skipped, Skipped{Path: p, Output: nout})
 			continue
 		}
 		res.Files = append(res.Files, p)

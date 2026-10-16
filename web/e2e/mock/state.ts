@@ -165,6 +165,7 @@ function buildQuestions(t: JobTemplate): QuestionsView {
     ask_attachments: t.ask?.attachments ?? true,
     default_preset: t.defaultPreset ?? "copy",
     ...(t.categories ? { categories: t.categories } : {}),
+    ...(VIDEO_EXT.test(t.path) ? {} : { source_folder: basename(t.path) }),
     defaults: {
       audio: [],
       subs: [],

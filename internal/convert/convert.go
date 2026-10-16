@@ -210,9 +210,13 @@ func (s *Session) Snapshot() Snapshot {
 // Plan is the result of scanning and probing a source: groups of files with
 // identical audio/subtitle layouts, ready to be asked about.
 type Plan struct {
-	Source  string
-	Skipped []scan.Skipped
-	Groups  []*group.Group
+	Source string
+	// SourceFolder is the source's own folder name when the source is a
+	// folder ("" for a single-file source); BuildSession appends it to the
+	// output root.
+	SourceFolder string
+	Skipped      []scan.Skipped
+	Groups       []*group.Group
 }
 
 // Probe scans and probes the source (writing outputs to outDir) and groups
@@ -265,7 +269,7 @@ func Probe(ctx context.Context, source, outDir string) (*Plan, error) {
 	if len(probed) == 0 && len(scanRes.Files) > 0 {
 		return nil, fmt.Errorf("ffprobe failed for all %d files (first: %s)", len(failed), failed[0])
 	}
-	return &Plan{Source: source, Skipped: scanRes.Skipped, Groups: group.Files(probed)}, nil
+	return &Plan{Source: source, SourceFolder: scanRes.SourceFolder, Skipped: scanRes.Skipped, Groups: group.Files(probed)}, nil
 }
 
 // AskInputs builds the question list for the plan's groups, applying config
@@ -320,7 +324,8 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 // AskInputs result. Preset, Normalize and Attachments are queue-item-wide
 // choices expected to be identical across groups; an empty Preset falls back
 // to the configured default preset. Category, when set, is a configured
-// output subfolder: outputs land in outDir/category.
+// output subfolder: outputs land in outDir/category. A folder source adds its
+// own name as a subfolder: outDir[/category]/<source folder>.
 func (p *Plan) BuildSession(cfg *config.Config, category string, answers []plan.Answers, outDir string) (*Session, error) {
 	if cfg == nil {
 		cfg = &config.Config{}
@@ -337,6 +342,9 @@ func (p *Plan) BuildSession(cfg *config.Config, category string, answers []plan.
 	outRoot := outDir
 	if category != "" {
 		outRoot = filepath.Join(outDir, category)
+	}
+	if p.SourceFolder != "" {
+		outRoot = filepath.Join(outRoot, p.SourceFolder)
 	}
 	for gi, g := range p.Groups {
 		if g.Audio == nil && len(g.Files) > 0 {

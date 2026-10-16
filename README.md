@@ -13,7 +13,9 @@ or a folder of movie files (alphabetically) to MKV with:
   (fonts, posters) are stream-copied; chapters are always kept
 - outputs land in the output folder (`FF_CONVERT_OUTPUT_DIR`, by default
   `converted/` in the working directory) and are **never overwritten** —
-  files that already have an output are skipped
+  files that already have an output are skipped. A converted **folder** gets
+  a subfolder of its own name there (inside the chosen category folder in the
+  web UI); single files land directly in it
 
 Before converting, all files are probed with ffprobe and grouped by identical
 audio+subtitle track layouts (language, title, codec, order, counts). Per
@@ -98,7 +100,9 @@ Environment variables:
 | `FF_CONVERT_CONFIG` | `~/.config/ff-convert/config.yaml` | preset config path |
 
 Converted outputs are written into the output folder (`FF_CONVERT_OUTPUT_DIR`,
-default `converted/` in the working directory), so mount it read-write.
+default `converted/` in the working directory), so mount it read-write. A
+converted folder gets a subfolder of its own name inside it, and inside the
+chosen category folder when the web UI selects one.
 
 ## Configuration
 

@@ -244,6 +244,27 @@ describe("AnswersModal", () => {
       );
     });
 
+    it("should preview a folder source's own subfolder inside the chosen category", async () => {
+      // Arrange
+      const job = questionsJob({
+        output_dir: "/out",
+        questions: questions({ categories: ["movies", "series"], source_folder: "Some Show" }),
+      });
+      render(AnswersModal, { props: { job, submit: vi.fn() } });
+
+      // Assert — no category selected: the source folder sits at the root.
+      expect(screen.getByText("/out/Some Show")).toBeTruthy();
+
+      // Act
+      await fireEvent.update(
+        screen.getByDisplayValue("— no category —") as HTMLSelectElement,
+        "series",
+      );
+
+      // Assert — the category folder comes first.
+      expect(screen.getByText("/out/series/Some Show")).toBeTruthy();
+    });
+
     it("should block submit and switch to a group that has no audio track selected", async () => {
       // Arrange
       const empty = group({

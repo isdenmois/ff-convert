@@ -100,6 +100,25 @@ func TestBuildSessionCategory(t *testing.T) {
 	if _, err := p.BuildSession(cfg, "movies", answers, "/out"); err == nil {
 		t.Fatal("unknown category must error")
 	}
+
+	// A folder source appends its own name after the category (and alone
+	// when no category is selected).
+	p.SourceFolder = "show"
+	sess, err = p.BuildSession(cfg, "series", answers, "/out")
+	if err != nil {
+		t.Fatalf("BuildSession(folder+series): %v", err)
+	}
+	if len(sess.Tasks) != 1 || sess.Tasks[0].Output != "/out/series/show/movie.mkv" {
+		t.Fatalf("folder+category outputs = %+v", sess.Tasks)
+	}
+
+	sess, err = p.BuildSession(cfg, "", answers, "/out")
+	if err != nil {
+		t.Fatalf("BuildSession(folder): %v", err)
+	}
+	if len(sess.Tasks) != 1 || sess.Tasks[0].Output != "/out/show/movie.mkv" {
+		t.Fatalf("folder outputs = %+v", sess.Tasks)
+	}
 }
 
 func TestPrepareAndRunEndToEnd(t *testing.T) {
@@ -167,6 +186,7 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 	if err := sess.Run(context.Background(), pool.New(2), nil); err != nil {
 		t.Fatal(err)
 	}
+	nested := filepath.Join(outDir, filepath.Base(dir))
 	for _, f := range sess.Files() {
 		if f.State != StateDone {
 			t.Fatalf("file %s state=%s err=%s", f.Path, f.State, f.Error)
@@ -174,8 +194,8 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 		if _, err := os.Stat(f.Output); err != nil {
 			t.Fatalf("output missing: %v", err)
 		}
-		if filepath.Dir(f.Output) != outDir {
-			t.Fatalf("output %q must be in the configured output dir", f.Output)
+		if filepath.Dir(f.Output) != nested {
+			t.Fatalf("output %q must be in the configured output dir's source-folder subfolder", f.Output)
 		}
 	}
 	if got := sess.Snapshot().Overall; got != 1 {
@@ -193,7 +213,7 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 	}
 
 	// Output must contain the selected eng audio as opus stereo and the sub.
-	m, err := probe.File(context.Background(), filepath.Join(outDir, "a.mkv"))
+	m, err := probe.File(context.Background(), filepath.Join(nested, "a.mkv"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +228,7 @@ func TestPrepareAndRunEndToEnd(t *testing.T) {
 		t.Fatalf("a.mkv video should be re-encoded mpeg4, got %s", m.Video[0].Codec)
 	}
 
-	m, err = probe.File(context.Background(), filepath.Join(outDir, "b.mkv"))
+	m, err = probe.File(context.Background(), filepath.Join(nested, "b.mkv"))
 	if err != nil {
 		t.Fatal(err)
 	}

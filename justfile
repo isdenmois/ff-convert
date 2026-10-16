@@ -40,7 +40,7 @@ run-tui path:
 # Run the web server against a library folder (default: current dir)
 run-web library-dir='.':
     cd web && bun run build
-    FF_CONVERT_LIBRARY_DIR='{{library-dir}}' go run ./cmd/ffconvert-web
+    FF_CONVERT_LIBRARY_DIR='{{library-dir}}' FF_CONVERT_CONFIG=./config.example.yaml go run ./cmd/ffconvert-web
 
 # Run the desktop app in dev mode (requires the wails CLI)
 run-desktop:

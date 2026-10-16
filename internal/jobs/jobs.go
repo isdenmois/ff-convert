@@ -96,6 +96,10 @@ type QuestionsView struct {
 	// shared manager leaves the field nil so the desktop never sees them.
 	Categories []string     `json:"categories,omitempty"`
 	Defaults   plan.Answers `json:"defaults"`
+	// SourceFolder is the subfolder a folder source contributes to the
+	// output root ("" for single-file sources); the answers modal composes
+	// its output preview with it.
+	SourceFolder string `json:"source_folder,omitempty"`
 }
 
 // FileView is a UI-friendly file progress record.
@@ -292,6 +296,7 @@ func (m *Manager) probeJob(j *job) {
 		AskNormalize:   m.cfg.Audio == nil || m.cfg.Audio.Normalize == nil,
 		AskAttachments: askAttachments,
 		DefaultPreset:  m.cfg.DefaultPresetName(),
+		SourceFolder:   p.SourceFolder,
 	}
 	for i, in := range inputs {
 		g := GroupView{

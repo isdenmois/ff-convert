@@ -69,7 +69,9 @@ attachments: copy
 
 # Optional category subfolders: the web answers modal then offers a select,
 # and the chosen category becomes the output subfolder:
-# «output_dir»/«category»/«stem».mkv. Entries are slugified ("TV Shows"
+# «output_dir»/«category»/«folder»/«stem».mkv (folder = the converted
+# folder's own name; single files skip it). Entries are slugified ("TV Shows"
 # becomes "tv-shows"). A file already present in the category folder is
-# replaced — the scan-time skip only knows the flat path.
-#categories: ["Movies", "Series"]
+# replaced — the scan-time skip only knows the flat and the source-folder
+# path.
+categories: ["Movies", "Series"]

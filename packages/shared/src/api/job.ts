@@ -41,6 +41,8 @@ export interface QuestionsView {
   default_preset: string;
   /** Selectable output subfolders (web frontend only; absent elsewhere). */
   categories?: string[];
+  /** Output subfolder a folder source contributes (absent for single files). */
+  source_folder?: string;
   defaults: Answers;
 }
 

@@ -38,8 +38,9 @@ const attachments = ref(q.defaults.attachments);
 // Output subfolder for the whole queue item ("" = the output root). Only
 // offered when the backend sends a categories list (web frontend).
 const category = ref("");
+// Output root for the whole job: <output_dir>[/<category>][/<source folder>].
 const outputDir = computed(() =>
-  category.value ? `${props.job.output_dir}/${category.value}` : props.job.output_dir,
+  [props.job.output_dir, category.value, q.source_folder].filter(Boolean).join("/"),
 );
 const draft = computed(() => drafts[groupIdx.value]);
 

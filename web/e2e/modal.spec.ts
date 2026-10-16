@@ -148,6 +148,23 @@ test.describe("answers modal", () => {
     });
   });
 
+  test("folder job keeps its folder inside the chosen category", async ({ mainPage, mock }) => {
+    await mock.seedJob(
+      {
+        path: "Movies/Some Show",
+        groups: [{ files: ["S01E01.mkv", "S01E02.mkv"] }],
+        categories: ["movies", "series"],
+      },
+      "questions",
+    );
+    await mainPage.open();
+    const modal = mainPage.modal;
+
+    await expect(modal.outputLine).toContainText("converted/Some Show");
+    await modal.categorySelect.selectOption("series");
+    await expect(modal.outputLine).toContainText("converted/series/Some Show");
+  });
+
   test("backdrop click closes the modal; the card reopens it", async ({ mainPage, mock }) => {
     await mock.seedJob({ path: "Movies/m.mkv" }, "questions");
     await mainPage.open();

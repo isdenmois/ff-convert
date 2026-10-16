@@ -72,6 +72,62 @@ func TestScanFolder(t *testing.T) {
 	}
 }
 
+func TestScanSourceFolder(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.mkv"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := Scan(dir, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.SourceFolder != filepath.Base(dir) {
+		t.Fatalf("folder scan SourceFolder = %q, want %q", res.SourceFolder, filepath.Base(dir))
+	}
+
+	res, err = Scan(filepath.Join(dir, "a.mkv"), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.SourceFolder != "" {
+		t.Fatalf("single-file scan SourceFolder = %q, want \"\"", res.SourceFolder)
+	}
+}
+
+func TestScanSkipsNestedOutput(t *testing.T) {
+	// A folder job's outputs live in <outDir>/<source folder>/; re-adding the
+	// folder must skip them instead of re-encoding over them.
+	dir := t.TempDir()
+	outDir := t.TempDir()
+	for _, f := range []string{"ep1.mkv", "ep2.mkv"} {
+		if err := os.WriteFile(filepath.Join(dir, f), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	nested := filepath.Join(outDir, filepath.Base(dir))
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "ep1.mkv"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := Scan(dir, outDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Files) != 1 || filepath.Base(res.Files[0]) != "ep2.mkv" {
+		t.Fatalf("Files = %v, want [ep2.mkv]", res.Files)
+	}
+	if len(res.Skipped) != 1 {
+		t.Fatalf("Skipped = %+v", res.Skipped)
+	}
+	if want := filepath.Join(nested, "ep1.mkv"); res.Skipped[0].Output != want {
+		t.Fatalf("Skipped output = %q, want %q", res.Skipped[0].Output, want)
+	}
+}
+
 func TestScanSkipsSourceInOutputDir(t *testing.T) {
 	// A source file whose output path is the file itself (the source folder
 	// doubles as the output folder) must be skipped, not converted in place.
