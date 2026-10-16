@@ -10,6 +10,9 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>();
 
 // The modal is only rendered when the job has pending questions.
+// `questions` is captured once at setup; this is safe because the modal is
+// mounted fresh for each job and the question content is stable for the job's
+// lifetime (WS snapshots replace the job object wholesale).
 // biome-ignore lint/style/noNonNullAssertion: guaranteed by the parent (the page only opens this when questions exist)
 const q = props.job.questions!;
 const groupIdx = ref(0);

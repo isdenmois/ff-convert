@@ -4,6 +4,7 @@ package convert
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -109,10 +110,11 @@ type Session struct {
 	Tasks   []*plan.Task
 	Skipped []scan.Skipped
 
-	mu       sync.Mutex
-	files    []*FileTask
-	started  time.Time // when the first file started converting
-	finished time.Time // when every task reached a terminal state
+	mu          sync.Mutex
+	files       []*FileTask
+	filesByPath map[string]*FileTask
+	started     time.Time // when the first file started converting
+	finished    time.Time // when every task reached a terminal state
 }
 
 // Snapshot returns a point-in-time copy of the file task states plus overall
@@ -205,21 +207,6 @@ func (s *Session) Snapshot() Snapshot {
 	return sn
 }
 
-// OverallCount returns (done, failed, total) file counts.
-func (s *Session) OverallCount() (done, failed, total int) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, f := range s.files {
-		if f.State == StateDone {
-			done++
-		}
-		if f.State == StateFailed {
-			failed++
-		}
-	}
-	return done, failed, len(s.files)
-}
-
 // Plan is the result of scanning and probing a source: groups of files with
 // identical audio/subtitle layouts, ready to be asked about.
 type Plan struct {
@@ -236,22 +223,34 @@ func Probe(ctx context.Context, source, outDir string) (*Plan, error) {
 		return nil, err
 	}
 
-	// Probe all files in parallel.
+	// Probe all files with a bounded worker set (not one goroutine per
+	// file).
 	medias := make([]*probe.Media, len(scanRes.Files))
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, pool.DefaultLimit())
-	for i, f := range scanRes.Files {
-		wg.Add(1)
-		go func(i int, f string) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			m, err := probe.File(ctx, f)
-			if err == nil {
-				medias[i] = m
-			}
-		}(i, f)
+	limit := pool.DefaultLimit()
+	if limit > len(scanRes.Files) && len(scanRes.Files) > 0 {
+		limit = len(scanRes.Files)
 	}
+	if limit < 1 {
+		limit = 1
+	}
+	jobs := make(chan int)
+	var wg sync.WaitGroup
+	for w := 0; w < limit; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range jobs {
+				m, err := probe.File(ctx, scanRes.Files[i])
+				if err == nil {
+					medias[i] = m
+				}
+			}
+		}()
+	}
+	for i := range scanRes.Files {
+		jobs <- i
+	}
+	close(jobs)
 	wg.Wait()
 
 	probed := make([]*probe.Media, 0, len(medias))
@@ -293,6 +292,10 @@ func (p *Plan) AskInputs(cfg *config.Config) []AskInput {
 
 	inputs := make([]AskInput, 0, len(p.Groups))
 	for _, g := range p.Groups {
+		if g.Audio == nil && len(g.Files) > 0 {
+			g.Audio = g.Files[0].Audio
+			g.Subtitles = g.Files[0].Subtitles
+		}
 		input := AskInput{
 			Group:          g,
 			AudioDefaults:  group.DefaultAudio(g),
@@ -329,31 +332,48 @@ func (p *Plan) BuildSession(cfg *config.Config, category string, answers []plan.
 		return nil, fmt.Errorf("unknown category %q", category)
 	}
 	presets := plan.PresetsMap(cfg)
-	sess := &Session{Source: p.Source, Skipped: p.Skipped}
+	sess := &Session{Source: p.Source, Skipped: p.Skipped, filesByPath: make(map[string]*FileTask)}
 	defPreset := cfg.DefaultPresetName()
 	outRoot := outDir
 	if category != "" {
 		outRoot = filepath.Join(outDir, category)
 	}
 	for gi, g := range p.Groups {
+		if g.Audio == nil && len(g.Files) > 0 {
+			g.Audio = g.Files[0].Audio
+			g.Subtitles = g.Files[0].Subtitles
+		}
 		ans := answers[gi]
 		name := defPreset
 		if ans.Preset != "" {
 			name = ans.Preset
 		}
 		for _, m := range g.Files {
+			fileAns := ans
+			resolvedAudio, rerr := resolveAudioIndexes(g.Audio, m.Audio, ans.Audio)
+			if rerr != nil {
+				return nil, rerr
+			}
+			fileAns.Audio = resolvedAudio
+			resolvedSubs, rerr := resolveSubIndexes(g.Subtitles, m.Subtitles, ans.Subs)
+			if rerr != nil {
+				return nil, rerr
+			}
+			fileAns.Subs = resolvedSubs
 			out := scan.OutputPathIn(outRoot, m.Path)
-			task, err := plan.Build(m, name, ans, presets, cfg.Bitrate(), out)
+			task, err := plan.Build(m, name, fileAns, presets, cfg.Bitrate(), out)
 			if err != nil {
 				return nil, err
 			}
 			sess.Tasks = append(sess.Tasks, task)
-			sess.files = append(sess.files, &FileTask{
+			ft := &FileTask{
 				Path:     m.Path,
 				Output:   out,
 				State:    StatePending,
 				Duration: m.DurationOf(),
-			})
+			}
+			sess.files = append(sess.files, ft)
+			sess.filesByPath[m.Path] = ft
 		}
 	}
 	return sess, nil
@@ -460,7 +480,11 @@ func (s *Session) Run(ctx context.Context, p *pool.Pool, r Reporter) error {
 			})
 			s.update(t, func(f *FileTask) {
 				if err != nil {
-					f.State = StateFailed
+					if ctx.Err() != nil {
+						f.State = StateCanceled
+					} else {
+						f.State = StateFailed
+					}
 					f.Error = err.Error()
 					os.Remove(t.Tmp)
 				} else if err := os.Rename(t.Tmp, t.Output); err != nil {
@@ -481,10 +505,14 @@ func (s *Session) Run(ctx context.Context, p *pool.Pool, r Reporter) error {
 	s.finished = time.Now()
 	s.mu.Unlock()
 
+	var errs []error
 	for _, f := range s.Files() {
 		if f.State == StateFailed {
-			return fmt.Errorf("%s", f.Error)
+			errs = append(errs, fmt.Errorf("%s: %s", f.Path, f.Error))
 		}
+	}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 	return nil
 }
@@ -509,24 +537,7 @@ func (s *Session) update(t *plan.Task, fn func(*FileTask)) {
 
 // taskFile must be called with s.mu held.
 func (s *Session) taskFile(t *plan.Task) *FileTask {
-	for _, f := range s.files {
-		if f.Path == t.Input {
-			return f
-		}
-	}
-	return nil
-}
-
-// FileTaskFor returns a copy of the file state for a task input path.
-func (s *Session) FileTaskFor(path string) (FileTask, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, f := range s.files {
-		if f.Path == path {
-			return *f, true
-		}
-	}
-	return FileTask{}, false
+	return s.filesByPath[t.Input]
 }
 
 // EnsureOutputDir creates the converted/ directory for the session's tasks.
@@ -543,4 +554,40 @@ func (s *Session) EnsureOutputDir() error {
 		}
 	}
 	return nil
+}
+
+// resolveAudioIndexes maps a group's selected audio tracks (given either as
+// the representative's absolute stream indexes or as list ordinals) to the
+// corresponding absolute indexes in file m's own audio stream list.
+func resolveAudioIndexes(rep, member []probe.Stream, selected []int) ([]int, error) {
+	return resolveTrackIndexes(rep, member, selected, "audio")
+}
+
+// resolveSubIndexes does the same for subtitle tracks.
+func resolveSubIndexes(rep, member []probe.Stream, selected []int) ([]int, error) {
+	return resolveTrackIndexes(rep, member, selected, "subtitle")
+}
+
+func resolveTrackIndexes(rep, member []probe.Stream, selected []int, kind string) ([]int, error) {
+	out := make([]int, 0, len(selected))
+	for _, sel := range selected {
+		ord := -1
+		for i, s := range rep {
+			if s.Index == sel {
+				ord = i
+				break
+			}
+		}
+		if ord < 0 {
+			// Fall back to treating the selection as a list ordinal.
+			if sel >= 0 && sel < len(rep) {
+				ord = sel
+			}
+		}
+		if ord < 0 || ord >= len(member) {
+			return nil, fmt.Errorf("no matching %s stream for selection %d", kind, sel)
+		}
+		out = append(out, member[ord].Index)
+	}
+	return out, nil
 }

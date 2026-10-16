@@ -18,6 +18,7 @@ test:
     go test ./...
     cd packages/shared && bun run test
     cd web && bun run test
+    cd cmd/ffconvert-desktop/frontend && bun run typecheck
 
 # Lint the frontends (biome: lint, format and import checks)
 lint:

@@ -238,16 +238,16 @@ func (m model) viewRunning() string {
 			name := filepath.Base(f.Path)
 			switch f.State {
 			case convert.StateDone:
-				b.WriteString(okStyle.Render("  ✓ ") + name + "\n")
+				b.WriteString(okStyle.Render("  ✓ ") + name)
 			case convert.StateFailed:
-				b.WriteString(errStyle.Render("  ✗ ") + name + "\n")
+				b.WriteString(errStyle.Render("  ✗ ") + name)
 			case convert.StateRunning:
 				bar := progressBar.ViewAs(f.Percent)
 				speed := f.Speed
 				if speed == "" {
 					speed = "…"
 				}
-				b.WriteString(fmt.Sprintf("  ▶ %s %s  %s\n", name, bar, dimStyle.Render(speed)))
+				b.WriteString(fmt.Sprintf("  ▶ %s %s  %s", name, bar, dimStyle.Render(speed)))
 			case convert.StateCanceled:
 				b.WriteString(dimStyle.Render("  − " + name + " (canceled)"))
 			default:

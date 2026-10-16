@@ -5,7 +5,6 @@ package group
 import (
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/isden/ff-convert/internal/probe"
@@ -97,11 +96,4 @@ func DefaultSubs(g *Group) []int {
 		}
 	}
 	return out
-}
-
-// SortGroupsByFirstFile orders groups by the first file path of each group.
-func SortGroupsByFirstFile(groups []*Group) {
-	sort.SliceStable(groups, func(i, j int) bool {
-		return groups[i].Files[0].Path < groups[j].Files[0].Path
-	})
 }

@@ -43,6 +43,8 @@ RUN apk add --no-cache ffmpeg \
 USER ffconvert
 WORKDIR /data
 ENV FF_CONVERT_LIBRARY_DIR=/data \
+    FF_CONVERT_OUTPUT_DIR=/result \
+    FF_CONVERT_CONFIG=/config/config.yaml \
     FF_CONVERT_PORT=8080
 VOLUME /data
 VOLUME /result

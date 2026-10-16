@@ -177,6 +177,3 @@ func Verify(ffprobePath string) error {
 	}
 	return nil
 }
-
-// Discard is a no-op progress sink.
-var Discard = func(Stats) {}

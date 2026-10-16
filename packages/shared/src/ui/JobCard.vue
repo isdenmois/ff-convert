@@ -140,13 +140,6 @@ const stateLabel: Record<string, string> = {
   width: 14px;
   text-align: center;
 }
-.fpath {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .pct {
   min-width: 90px;
   text-align: right;

@@ -4,7 +4,6 @@ package plan
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -57,6 +56,9 @@ func Build(m *probe.Media, presetName string, ans Answers, presets map[string]co
 	}
 	if !preset.IsCopy() && preset.Codec == "" {
 		return nil, fmt.Errorf("preset %q has no codec", presetName)
+	}
+	if m.MainVideoIndex < 0 {
+		return nil, fmt.Errorf("%s: no video stream", m.Path)
 	}
 
 	audioByIndex := make(map[int]probe.Stream, len(m.Audio))
@@ -194,17 +196,8 @@ func itoa(n int) string { return fmt.Sprintf("%d", n) }
 
 // PresetsMap converts a config into the name→preset map used by Build.
 func PresetsMap(cfg *config.Config) map[string]config.Preset {
-	out := config.Builtins()
-	for k, v := range cfg.Presets {
-		out[k] = v
+	if cfg == nil {
+		cfg = &config.Config{}
 	}
-	return out
-}
-
-// SortedIndexes returns the answers' track indexes sorted ascending —
-// convenient for UIs that toggle selections.
-func SortedIndexes(in []int) []int {
-	out := append([]int(nil), in...)
-	sort.Ints(out)
-	return out
+	return cfg.AllPresets()
 }

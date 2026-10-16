@@ -6,7 +6,9 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -79,22 +81,39 @@ type Config struct {
 	builtins map[string]Preset
 }
 
-// Builtins returns the built-in video presets.
-func Builtins() map[string]Preset {
-	return map[string]Preset{
-		"copy":       {Codec: "copy"},
-		"av1":        {Codec: "libsvtav1", Args: []string{"-preset", "6", "-crf", "28"}, PixFmt: "yuv420p"},
-		"hevc":       {Codec: "libx265", Args: []string{"-preset", "medium", "-crf", "23"}, PixFmt: "yuv420p"},
-		"hevc-nvenc": {Codec: "hevc_nvenc", Args: []string{"-preset", "p5", "-cq", "26"}},
-		"hevc-vaapi": {Codec: "hevc_vaapi", Args: []string{"-qp", "24"}, VAAPIDevice: "/dev/dri/renderD128", VF: "format=nv12|vaapi,hwupload"},
-		// av1-nvenc needs an RTX 40+ GPU (AV1 NVENC); 10-bit keeps HDR
-		// sources intact via ffmpeg's color-metadata passthrough.
-		"av1-nvenc": {Codec: "av1_nvenc", Args: []string{"-preset", "p7", "-tune", "hq", "-cq", "28"}, PixFmt: "yuv420p10le"},
-	}
+// builtinList is the single source of truth for built-in presets and their
+// display order.
+var builtinList = []struct {
+	name   string
+	preset Preset
+}{
+	{name: "copy", preset: Preset{Codec: "copy"}},
+	{name: "av1", preset: Preset{Codec: "libsvtav1", Args: []string{"-preset", "6", "-crf", "28"}, PixFmt: "yuv420p"}},
+	{name: "hevc", preset: Preset{Codec: "libx265", Args: []string{"-preset", "medium", "-crf", "23"}, PixFmt: "yuv420p"}},
+	{name: "hevc-nvenc", preset: Preset{Codec: "hevc_nvenc", Args: []string{"-preset", "p5", "-cq", "26"}}},
+	{name: "hevc-vaapi", preset: Preset{Codec: "hevc_vaapi", Args: []string{"-qp", "24"}, VAAPIDevice: "/dev/dri/renderD128", VF: "format=nv12|vaapi,hwupload"}},
+	// av1-nvenc needs an RTX 40+ GPU (AV1 NVENC); 10-bit keeps HDR
+	// sources intact via ffmpeg's color-metadata passthrough.
+	{name: "av1-nvenc", preset: Preset{Codec: "av1_nvenc", Args: []string{"-preset", "p7", "-tune", "hq", "-cq", "28"}, PixFmt: "yuv420p10le"}},
 }
 
-// builtinOrder is the display order of built-in preset names.
-var builtinOrder = []string{"copy", "av1", "hevc", "hevc-nvenc", "hevc-vaapi", "av1-nvenc"}
+// Builtins returns the built-in video presets.
+func Builtins() map[string]Preset {
+	out := make(map[string]Preset, len(builtinList))
+	for _, b := range builtinList {
+		out[b.name] = b.preset
+	}
+	return out
+}
+
+// builtinNames returns the built-in preset names in canonical order.
+func builtinNames() []string {
+	out := make([]string, 0, len(builtinList))
+	for _, b := range builtinList {
+		out = append(out, b.name)
+	}
+	return out
+}
 
 // Load reads the configuration. A missing file is not an error: the returned
 // config contains the built-in presets with Exists=false.
@@ -120,7 +139,9 @@ func LoadFrom(path string) (*Config, error) {
 		}
 		return nil, fmt.Errorf("read config: %w", err)
 	}
-	if err := yaml.Unmarshal(data, cfg); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(cfg); err != nil && err != io.EOF {
 		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
 	cfg.Categories = cleanCategories(cfg.Categories)
@@ -157,9 +178,9 @@ func (c *Config) Preset(name string) (Preset, bool) {
 // canonical order) followed by user-defined presets in sorted order.
 // Built-in names shadowed by user presets are listed only once.
 func (c *Config) PresetNames() []string {
-	seen := make(map[string]bool, len(builtinOrder)+len(c.Presets))
-	names := make([]string, 0, len(builtinOrder)+len(c.Presets))
-	for _, n := range builtinOrder {
+	seen := make(map[string]bool, len(builtinNames())+len(c.Presets))
+	names := make([]string, 0, len(builtinNames())+len(c.Presets))
+	for _, n := range builtinNames() {
 		seen[n] = true
 		names = append(names, n)
 	}
@@ -171,6 +192,16 @@ func (c *Config) PresetNames() []string {
 	}
 	sort.Strings(custom)
 	return append(names, custom...)
+}
+
+// AllPresets returns the effective preset map (built-ins overridden by
+// user presets), equivalent to plan.PresetsMap without the package cycle.
+func (c *Config) AllPresets() map[string]Preset {
+	out := Builtins()
+	for k, v := range c.Presets {
+		out[k] = v
+	}
+	return out
 }
 
 // Bitrate returns the audio bitrate to use (default 128k).

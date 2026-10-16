@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -18,7 +17,6 @@ import (
 	"github.com/isden/ff-convert/internal/plan"
 	"github.com/isden/ff-convert/internal/pool"
 	"github.com/isden/ff-convert/internal/probe"
-	"github.com/isden/ff-convert/internal/scan"
 )
 
 // State is the lifecycle state of a job.
@@ -366,18 +364,7 @@ func (m *Manager) runJob(j *job) {
 	m.mu.Unlock()
 	m.notify()
 
-	_ = j.sess.Run(j.ctx, m.pool, convert.ReporterFuncs{
-		Start: func(*plan.Task) {
-			m.mu.Lock()
-			if j.state == StateRunning {
-				m.mu.Unlock()
-				return
-			}
-			j.state = StateRunning
-			m.mu.Unlock()
-			m.notify()
-		},
-	})
+	_ = j.sess.Run(j.ctx, m.pool, convert.ReporterFuncs{})
 
 	m.mu.Lock()
 	switch {
@@ -512,13 +499,3 @@ func (m *Manager) view(j *job) JobView {
 
 // Config exposes the active configuration (for UI choices).
 func (m *Manager) Config() *config.Config { return m.cfg }
-
-// SortedVideoExts exposes the scanned extensions (informational).
-func SortedVideoExts() []string {
-	out := make([]string, 0, len(scan.VideoExts))
-	for e := range scan.VideoExts {
-		out = append(out, e)
-	}
-	sort.Strings(out)
-	return out
-}

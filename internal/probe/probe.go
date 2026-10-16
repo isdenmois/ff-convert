@@ -2,6 +2,7 @@
 package probe
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -88,14 +89,6 @@ type Media struct {
 	MainVideoIndex int `json:"main_video_index"`
 }
 
-// Name returns the base name of the file.
-func (m *Media) Name() string {
-	if i := strings.LastIndexByte(m.Path, '/'); i >= 0 {
-		return m.Path[i+1:]
-	}
-	return m.Path
-}
-
 type ffStream struct {
 	Index         int    `json:"index"`
 	CodecName     string `json:"codec_name"`
@@ -127,8 +120,14 @@ func File(ctx context.Context, path string) (*Media, error) {
 		"-show_format", "-show_streams", "-show_chapters",
 		"--", path,
 	)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return nil, fmt.Errorf("ffprobe %s: %w: %s", path, err, msg)
+		}
 		return nil, fmt.Errorf("ffprobe %s: %w", path, err)
 	}
 	return parse(path, out)

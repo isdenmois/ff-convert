@@ -14,11 +14,12 @@ const EnvConcurrency = "FF_CONVERT_CONCURRENCY"
 
 // Pool runs jobs with at most Limit running at once.
 type Pool struct {
-	sem chan struct{}
-	wg  sync.WaitGroup
+	limit int
+	jobs  chan func()
 
 	mu      sync.Mutex
 	running int
+	wg      sync.WaitGroup
 }
 
 // New creates a pool with the given concurrency limit (minimum 1).
@@ -26,7 +27,11 @@ func New(limit int) *Pool {
 	if limit < 1 {
 		limit = 1
 	}
-	return &Pool{sem: make(chan struct{}, limit)}
+	p := &Pool{limit: limit, jobs: make(chan func())}
+	for i := 0; i < limit; i++ {
+		go p.worker()
+	}
+	return p
 }
 
 // DefaultLimit returns the default concurrency: $FF_CONVERT_CONCURRENCY or
@@ -48,34 +53,28 @@ func DefaultLimit() int {
 func NewDefault() *Pool { return New(DefaultLimit()) }
 
 // Limit returns the configured concurrency limit.
-func (p *Pool) Limit() int { return cap(p.sem) }
+func (p *Pool) Limit() int { return p.limit }
 
-// Go submits a job. The call returns immediately; the job blocks internally
-// until a slot is free. Use Wait to wait for all submitted jobs.
+// Go submits a job. The call blocks until a worker is available to accept
+// it; the job itself runs asynchronously. Use Wait to wait for all submitted
+// jobs.
 func (p *Pool) Go(job func()) {
 	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
-		p.sem <- struct{}{}
+	p.jobs <- job
+}
+
+func (p *Pool) worker() {
+	for job := range p.jobs {
 		p.mu.Lock()
 		p.running++
 		p.mu.Unlock()
-		defer func() {
-			<-p.sem
-			p.mu.Lock()
-			p.running--
-			p.mu.Unlock()
-		}()
 		job()
-	}()
+		p.mu.Lock()
+		p.running--
+		p.mu.Unlock()
+		p.wg.Done()
+	}
 }
 
 // Wait blocks until all submitted jobs have finished.
 func (p *Pool) Wait() { p.wg.Wait() }
-
-// Running returns the number of currently executing jobs.
-func (p *Pool) Running() int {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return p.running
-}
