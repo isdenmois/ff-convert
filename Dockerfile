@@ -28,17 +28,40 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" \
     -o /out/ffconvert-web ./cmd/ffconvert-web
 
-# --- Stage 3: runtime with ffmpeg ---
-FROM alpine:3.24
+# --- Stage 3: runtime with ffmpeg + Intel QSV/VAAPI ---
+FROM debian:trixie-slim
 LABEL org.opencontainers.image.title="ffconvert" \
       org.opencontainers.image.source="https://github.com/isden/ff-convert" \
       org.opencontainers.image.description="Batch movie transcoder wrapping ffmpeg → MKV (web UI)" \
       org.opencontainers.image.licenses="MIT"
 ARG PUID=1000
 ARG PGID=1000
-RUN apk add --no-cache ffmpeg \
- && addgroup -g ${PGID} ffconvert \
- && adduser -D -u ${PUID} -G ffconvert ffconvert \
+ARG RENDER_GID=105
+ENV DEBIAN_FRONTEND=noninteractive \
+    LIBVA_DRIVER_NAME=iHD
+# ffmpeg: encodes everything (nvenc/x265/svt-av1 + h264_qsv/hevc_qsv/av1_qsv)
+# intel-media-va-driver: iHD VAAPI driver (Gen8+; i965 is not shipped for
+#   Gen9+ — the non-free variant is not in Debian main and is not needed here)
+# libvpl2 + libmfx-gen1.2: oneVPL runtime and the GPU implementation that the
+#   *_qsv encoders load (-init_hw_device qsv)
+# vainfo: `docker run --rm --device /dev/dri ffconvert vainfo` sanity check
+RUN sed -i 's/^Components: main$/Components: main contrib non-free non-free-firmware/' /etc/apt/sources.list.d/debian.sources \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      ffmpeg \
+      intel-media-va-driver-non-free \
+      libmfx-gen1.2 \
+      libvpl2 \
+      libva2 \
+      libva-drm2 \
+      vainfo \
+ && rm -rf /var/lib/apt/lists/* \
+ && groupadd -g ${PGID} ffconvert \
+ && (getent group render >/dev/null || groupadd -g ${RENDER_GID} -r render) \
+ && useradd --uid ${PUID} --gid ffconvert --home-dir /data \
+      --no-create-home --shell /usr/sbin/nologin ffconvert \
+      --groups video,render \
  && mkdir -p /data && chown ffconvert:ffconvert /data
 USER ffconvert
 WORKDIR /data
@@ -50,5 +73,7 @@ VOLUME /data
 VOLUME /result
 VOLUME /config
 EXPOSE 8080
+# Hardware encode: pass the render node through (--device /dev/dri) and add
+# the host's render group id (`group_add: ["<gid>"]`) when it is not 0666.
 COPY --from=build /out/ffconvert-web /usr/local/bin/ffconvert-web
 ENTRYPOINT ["ffconvert-web"]
