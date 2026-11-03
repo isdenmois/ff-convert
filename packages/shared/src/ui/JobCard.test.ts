@@ -203,7 +203,35 @@ describe("JobCard", () => {
 
       // Assert
       expect(screen.getByText("✗")).toBeTruthy();
-      expect(screen.getByText("failed").getAttribute("title")).toBe("boom");
+      expect(screen.getByTestId("file-error").textContent).toBe("boom");
+    });
+
+    it("should show the error details of a single failed file", () => {
+      // Arrange
+      const job = baseJob({
+        state: "failed",
+        total: 1,
+        failed: 1,
+        files: [
+          {
+            path: "/in/3.mkv",
+            name: "3.mkv",
+            output: "",
+            state: "failed",
+            percent: 0,
+            error: "ffmpeg failed: Invalid data found when processing input",
+          },
+        ],
+      });
+
+      // Act
+      render(JobCard, { props: { job } });
+
+      // Assert
+      expect(screen.getByText("3.mkv")).toBeTruthy();
+      expect(screen.getByTestId("file-error").textContent).toContain(
+        "Invalid data found when processing input",
+      );
     });
 
     it("should hide counter, progress and file rows when no files are known yet", () => {

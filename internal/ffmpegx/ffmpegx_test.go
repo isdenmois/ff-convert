@@ -2,6 +2,7 @@ package ffmpegx
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -78,11 +79,15 @@ func TestRunReal(t *testing.T) {
 	outPath := filepath.Join(dir, "out.mkv")
 	var mu sync.Mutex
 	var maxPct float64
+	var logged string
 	err := Run(context.Background(), Options{
 		Args: []string{"-hide_banner", "-loglevel", "error", "-y",
 			"-i", src, "-c:v", "libx264", "-preset", "ultrafast",
 			"-progress", "pipe:1", "-nostats", outPath},
 		Duration: 2 * time.Second,
+		Logf: func(format string, args ...any) {
+			logged = fmt.Sprintf(format, args...)
+		},
 		OnProgress: func(s Stats) {
 			mu.Lock()
 			if s.Percent > maxPct {
@@ -93,6 +98,9 @@ func TestRunReal(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
+	}
+	if !strings.HasPrefix(logged, "ffmpeg ") || !strings.Contains(logged, outPath) {
+		t.Fatalf("logged command = %q, want ffmpeg invocation including %s", logged, outPath)
 	}
 	if _, err := os.Stat(outPath); err != nil {
 		t.Fatalf("output missing: %v", err)
@@ -117,5 +125,18 @@ func TestRunErrorTail(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "ffmpeg failed") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCommandLine(t *testing.T) {
+	old := FFmpegPath
+	t.Cleanup(func() { FFmpegPath = old })
+	FFmpegPath = "ffmpeg"
+
+	got := CommandLine([]string{"-i", "/movies/a b.mkv", "-metadata",
+		"title=it's here", "-c", "copy", "/out/plain.mkv"})
+	want := `ffmpeg -i '/movies/a b.mkv' -metadata 'title=it'\''s here' -c copy /out/plain.mkv`
+	if got != want {
+		t.Fatalf("CommandLine = %q, want %q", got, want)
 	}
 }

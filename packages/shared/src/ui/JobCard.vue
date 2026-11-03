@@ -23,6 +23,12 @@ const timeLabel = computed(() => {
   return `took ${formatDuration(elapsed)}`;
 });
 
+const showFiles = computed(
+  () =>
+    !!props.job.files &&
+    (props.job.files.length > 1 || props.job.files.some((f) => f.state === "failed")),
+);
+
 const stateLabel: Record<string, string> = {
   probing: "probing",
   questions: "needs answers",
@@ -69,7 +75,7 @@ const stateLabel: Record<string, string> = {
       {{ job.skipped.length }} skipped
     </div>
 
-    <div v-if="job.files && job.files.length > 1" class="files">
+    <div v-if="showFiles" class="files">
       <div v-for="f in job.files" :key="f.path" class="file" :data-state="f.state">
         <span class="fstate">
           {{ f.state === 'done' ? '✓' : f.state === 'failed' ? '✗' : f.state === 'running' ? '▶' : '·' }}
@@ -79,7 +85,8 @@ const stateLabel: Record<string, string> = {
           <div class="bar"><div :style="{ width: Math.round(f.percent * 100) + '%' }" /></div>
           <span class="muted small pct">{{ Math.round(f.percent * 100) }}%</span>
         </template>
-        <span v-else-if="f.state === 'failed'" class="error small" :title="f.error">failed</span>
+        <span v-else-if="f.state === 'failed'" class="error small">failed</span>
+        <pre v-if="f.state === 'failed' && f.error" class="file-error" data-testid="file-error">{{ f.error }}</pre>
       </div>
     </div>
   </div>
@@ -121,10 +128,26 @@ const stateLabel: Record<string, string> = {
 }
 .file {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 3px 0;
   font-size: 13px;
+}
+.file-error {
+  flex-basis: 100%;
+  margin: 2px 0 4px 22px;
+  padding: 6px 8px;
+  max-height: 9em;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--err);
+  background: var(--panel-2);
+  border-left: 2px solid var(--err);
+  border-radius: 3px;
 }
 .file[data-state='done'] .fname { color: var(--ok); }
 .file[data-state='failed'] .fname { color: var(--err); }

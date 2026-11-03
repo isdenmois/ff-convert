@@ -177,6 +177,9 @@ type Manager struct {
 	pool *pool.Pool
 	// outDir is the current output folder; jobs pin it at creation.
 	outDir string
+	// logf receives debug log lines (the ffmpeg command line of each task);
+	// nil disables logging.
+	logf func(format string, args ...any)
 
 	mu        sync.Mutex
 	jobs      []*job
@@ -212,6 +215,14 @@ func (m *Manager) SetOutputDir(dir string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.outDir = dir
+}
+
+// SetLogger sets the sink for debug log lines — currently the exact ffmpeg
+// command line of every task as it starts. nil disables logging.
+func (m *Manager) SetLogger(fn func(format string, args ...any)) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.logf = fn
 }
 
 // Subscribe registers a change notification callback. The returned function
@@ -356,6 +367,7 @@ func (m *Manager) SubmitAnswers(id string, category string, answers []plan.Answe
 	j.answers = answers
 	j.category = category
 	j.sess = sess
+	sess.Logf = m.logf
 	j.state = StateQueued
 	m.mu.Unlock()
 	go m.runJob(j)

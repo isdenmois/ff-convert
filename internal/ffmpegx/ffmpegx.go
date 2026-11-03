@@ -34,6 +34,9 @@ type Options struct {
 	Duration time.Duration
 	// OnProgress, when set, receives periodic progress updates.
 	OnProgress func(Stats)
+	// Logf, when set, receives the exact command line ffmpeg is started with,
+	// before it runs. Intended for debug logging by the frontends.
+	Logf func(format string, args ...any)
 }
 
 // Run executes ffmpeg with the given arguments. stdout is expected to carry
@@ -41,6 +44,9 @@ type Options struct {
 // reporting.
 func Run(ctx context.Context, opts Options) error {
 	cmd := exec.CommandContext(ctx, FFmpegPath, opts.Args...)
+	if opts.Logf != nil {
+		opts.Logf("%s", CommandLine(opts.Args))
+	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -78,6 +84,35 @@ func Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("ffmpeg failed: %s", msg)
 	}
 	return nil
+}
+
+// CommandLine renders the ffmpeg invocation as a single shell-quoted line, so
+// a logged command can be pasted back into a terminal for debugging.
+func CommandLine(args []string) string {
+	var b strings.Builder
+	b.WriteString(shellQuote(FFmpegPath))
+	for _, a := range args {
+		b.WriteString(" ")
+		b.WriteString(shellQuote(a))
+	}
+	return b.String()
+}
+
+// shellQuote leaves words made only of shell-safe characters bare and wraps
+// everything else in single quotes, escaping embedded quotes.
+func shellQuote(s string) string {
+	if s != "" && strings.IndexFunc(s, func(r rune) bool {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			return false
+		case strings.ContainsRune("_@%+=:,./-", r):
+			return false
+		}
+		return true
+	}) < 0 {
+		return s
+	}
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
 func parseProgress(r io.Reader, opts Options) {

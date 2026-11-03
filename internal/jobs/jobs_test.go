@@ -1,9 +1,12 @@
 package jobs
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -58,6 +61,13 @@ func TestJobLifecycle(t *testing.T) {
 	makeFixture(t, dir, "b.mkv")
 
 	m := NewManager(nil, pool.New(2), outDir)
+	var logMu sync.Mutex
+	var logs []string
+	m.SetLogger(func(format string, args ...any) {
+		logMu.Lock()
+		logs = append(logs, fmt.Sprintf(format, args...))
+		logMu.Unlock()
+	})
 	notifications := 0
 	unsub := m.Subscribe(func() { notifications++ })
 	defer unsub()
@@ -130,6 +140,17 @@ func TestJobLifecycle(t *testing.T) {
 	}
 	if notifications < 3 {
 		t.Fatalf("notifications = %d, want >= 3", notifications)
+	}
+	logMu.Lock()
+	gotLogs := append([]string(nil), logs...)
+	logMu.Unlock()
+	if len(gotLogs) != 2 {
+		t.Fatalf("ffmpeg run lines = %d (%q), want 2", len(gotLogs), gotLogs)
+	}
+	for _, line := range gotLogs {
+		if !strings.HasPrefix(line, "ffmpeg ") || !strings.Contains(line, outDir) {
+			t.Fatalf("logged command %q, want ffmpeg invocation with args under %s", line, outDir)
+		}
 	}
 
 	// Re-adding the same folder must skip everything.

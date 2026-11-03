@@ -38,7 +38,9 @@ func NewApp() *App {
 		log.Fatal("config: ", err)
 	}
 	outDir := scan.ResolveOutputDir(cfg.OutputDir, defaultOutputDir())
-	return &App{mgr: jobs.NewManager(cfg, pool.NewDefault(), outDir), defaultOutDir: outDir}
+	mgr := jobs.NewManager(cfg, pool.NewDefault(), outDir)
+	mgr.SetLogger(log.Printf)
+	return &App{mgr: mgr, defaultOutDir: outDir}
 }
 
 func (a *App) startup(ctx context.Context) {

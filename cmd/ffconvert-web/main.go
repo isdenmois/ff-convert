@@ -68,6 +68,7 @@ func main() {
 		"config", map[string]any{"exists": cfg.Exists, "path": cfg.Path})
 
 	mgr := jobs.NewManager(cfg, p, outDir)
+	mgr.SetLogger(logger.Infof)
 	srv := &server{mgr: mgr, lib: abs, outDir: outDir, log: logger, categories: cfg.Categories}
 
 	r := chi.NewRouter()

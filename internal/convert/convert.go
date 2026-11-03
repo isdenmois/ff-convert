@@ -110,6 +110,11 @@ type Session struct {
 	Tasks   []*plan.Task
 	Skipped []scan.Skipped
 
+	// Logf, when set, receives debug log lines from the run — currently the
+	// exact ffmpeg command line of each task. Set it before Run; nil disables
+	// logging.
+	Logf func(format string, args ...any)
+
 	mu          sync.Mutex
 	files       []*FileTask
 	filesByPath map[string]*FileTask
@@ -483,6 +488,7 @@ func (s *Session) Run(ctx context.Context, p *pool.Pool, r Reporter) error {
 			err := ffmpegx.Run(ctx, ffmpegx.Options{
 				Args:     t.Args,
 				Duration: t.Duration,
+				Logf:     s.Logf,
 				OnProgress: func(st ffmpegx.Stats) {
 					s.update(t, func(f *FileTask) {
 						f.Percent = st.Percent
