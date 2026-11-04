@@ -1,0 +1,26 @@
+services:
+  ffconvert:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PUID: ${PUID:-1000}
+        PGID: ${PGID:-1000}
+        RENDER_GID: ${RENDER_GID:-105}
+    environment:
+      # root folder browsable/convertible in the UI (defaults to /data)
+      FF_CONVERT_LIBRARY_DIR: /data
+      # worker pool size (defaults to CPU count / 2)
+      FF_CONVERT_CONCURRENCY: ${FF_CONVERT_CONCURRENCY:-5}
+      # converted outputs are written here (defaults to ./converted in the
+      # container's working directory)
+      FF_CONVERT_OUTPUT_DIR: /result
+      # optional preset config mounted below
+      FF_CONVERT_CONFIG: /config/config.yaml
+    volumes:
+      - ${FF_CONVERT_INPUT}:/data
+      - ${FF_CONVERT_OUTPUT}:/result
+      - ./config.example.yaml:/config/config.yaml:ro
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    restart: unless-stopped

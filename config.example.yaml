@@ -38,26 +38,36 @@
 # Docker: hardware encoders need device passthrough — NVENC requires the
 # nvidia container runtime (--gpus all), VAAPI requires /dev/dri.
 presets:
-  mobile-av1:
+  hevc: # SDR, 8-bit (HEVC-capable Intel GPU, Skylake+)
+    codec: hevc_qsv
+    args: ["-preset", "slow", "-global_quality:v", "24"]
+    pix_fmt: yuv420p
+  hevc-hdr: # 10-bit HDR10; needs Main10 encode (verify on your GPU)
+    codec: hevc_qsv
+    args: ["-preset", "slow", "-global_quality:v", "24"]
+    pix_fmt: p010le
+  hevc-540:
+    codec: hevc_qsv
+    args: ["-preset", "slow", "-global_quality:v", "24"]
+    pix_fmt: yuv420p
+    vf: "scale=-2:540"
+  av1-540:
     codec: libsvtav1
     args: ["-preset", "8", "-crf", "30"]
     pix_fmt: yuv420p10le
-    vf: 'scale=min(1280\,iw):-2'
-  mobile-hevc: # SDR sources only (8-bit)
-    codec: libx265
-    args: ["-preset", "medium", "-crf", "25"]
+    vf: "scale=-2:540"
+  # Intel Quick Sync: encoding runs on the GPU, decoding stays in software,
+  # so any source codec works and only the encoder must be supported by the
+  # chip. -global_quality is QSV's constant-quality (ICQ) mode — lower is
+  # better/larger; 22–26 is the useful HEVC range, 26–30 for AV1. QSV picks
+  # the default Intel render node on its own; pinning one on iGPU+Arc
+  # systems needs -qsv_device, which a preset cannot express. An unsupported
+  # codec/profile fails the job (no CPU fallback) — smoke-test one file
+  # before setting a QSV preset as default_preset.
+  h264:
+    codec: h264_qsv
+    args: ["-preset", "slow", "-global_quality:v", "22"]
     pix_fmt: yuv420p
-    vf: 'scale=min(1280\,iw):-2'
-  av1-nvenc-mobile:
-    codec: av1_nvenc
-    args: ["-preset", "p7", "-tune", "hq", "-cq", "28"]
-    pix_fmt: yuv420p10le
-    vf: 'scale=min(1280\,iw):-2'
-  hevc-vaapi-mobile:
-    codec: hevc_vaapi
-    args: ["-qp", "24"]
-    vaapi_device: /dev/dri/renderD128
-    vf: 'scale=min(1280\,iw):-2,format=nv12|vaapi,hwupload'
 
 # Optional audio defaults (skips the corresponding question).
 audio:
@@ -67,11 +77,5 @@ audio:
 # Optional attachments default: copy | omit (skips the question).
 attachments: copy
 
-# Optional category subfolders: the web answers modal then offers a select,
-# and the chosen category becomes the output subfolder:
-# «output_dir»/«category»/«folder»/«stem».mkv (folder = the converted
-# folder's own name; single files skip it). Entries are slugified ("TV Shows"
-# becomes "tv-shows"). A file already present in the category folder is
-# replaced — the scan-time skip only knows the flat and the source-folder
-# path.
-categories: ["Movies", "Series"]
+# Categories
+categories: ["Anime", "Movies", "Series"]
